@@ -1,0 +1,4199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AETHER AI — Advanced AI OS</title>
+  <script src="/static/socket.io.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Outfit:wght@300;400;600&family=JetBrains+Mono:wght@400;500&display=swap');
+    
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    :root {
+      --bg-dark: #030306;
+      --bg-card: rgba(5, 5, 8, 0.7);
+      --border-glow: #ff5500;
+      --neon-cyan: #00e5ff;
+      --neon-purple: #a100ff;
+      --neon-orange: #ff5500;
+      --neon-emerald: #00ffaa;
+      --neon-gold: #ffd700;
+      --neon-crimson: #ff1e00;
+      --text-main: #e2e8f0;
+      --text-muted: #64748b;
+      --glow-shadow: 0 0 15px rgba(0, 229, 255, 0.3);
+    }
+    
+    body {
+      background: var(--bg-dark);
+      font-family: 'Outfit', sans-serif;
+      color: var(--text-main);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    
+    .scan-line {
+      position: fixed;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(0, 240, 255, 0.15), transparent);
+      animation: scan 6s linear infinite;
+      pointer-events: none;
+      z-index: 999;
+    }
+    @keyframes scan {
+      0% { top: 0; opacity: 0; }
+      10% { opacity: 1; }
+      90% { opacity: 1; }
+      100% { top: 100%; opacity: 0; }
+    }
+    
+    /* Top Tab Navigation */
+    .lab-navigation {
+      display: flex;
+      justify-content: center;
+      background: rgba(3, 3, 6, 0.95);
+      border-bottom: 0.5px solid rgba(0, 229, 255, 0.15);
+      padding: 10px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      gap: 12px;
+      backdrop-filter: blur(10px);
+    }
+    
+    .tab-btn {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      font-family: 'Orbitron', sans-serif;
+      font-size: 11px;
+      letter-spacing: 2px;
+      padding: 8px 18px;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+    }
+    
+    .tab-btn:hover {
+      color: var(--neon-cyan);
+      border-color: rgba(0, 229, 255, 0.2);
+    }
+    
+    .tab-btn.active {
+      color: var(--neon-cyan);
+      border: 1px solid var(--neon-cyan);
+      background: rgba(0, 229, 255, 0.05);
+      box-shadow: var(--glow-shadow);
+      text-shadow: 0 0 5px var(--neon-cyan);
+    }
+    
+    .tab-content {
+      display: none;
+      padding: 16px;
+      max-width: 1400px;
+      margin: 0 auto;
+      animation: fadeIn 0.4s ease-out;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    /* Global Styles */
+    h1, h2, h3, .panel-title, .hud-label {
+      font-family: 'Orbitron', sans-serif;
+    }
+    
+    .panel {
+      background: var(--bg-card);
+      border: 1px solid #142035;
+      border-radius: 4px;
+      padding: 16px;
+      position: relative;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(5px);
+    }
+    
+    .panel::before {
+      content: '';
+      position: absolute;
+      top: -1px;
+      left: 16px;
+      width: 40px;
+      height: 1px;
+      background: var(--neon-cyan);
+    }
+    
+    .panel-title {
+      font-size: 10px;
+      color: var(--neon-cyan);
+      letter-spacing: 3px;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      border-bottom: 0.5px solid rgba(20, 32, 53, 0.5);
+      padding-bottom: 6px;
+    }
+    
+    .corner {
+      position: fixed;
+      width: 15px;
+      height: 15px;
+      pointer-events: none;
+    }
+    .corner.tl { top: 8px; left: 8px; border-top: 1px solid var(--neon-cyan); border-left: 1px solid var(--neon-cyan); }
+    .corner.tr { top: 8px; right: 8px; border-top: 1px solid var(--neon-cyan); border-right: 1px solid var(--neon-cyan); }
+    .corner.bl { bottom: 8px; left: 8px; border-bottom: 1px solid var(--neon-cyan); border-left: 1px solid var(--neon-cyan); }
+    .corner.br { bottom: 8px; right: 8px; border-bottom: 1px solid var(--neon-cyan); border-right: 1px solid var(--neon-cyan); }
+    
+    /* ─────────────────────────────────────────────
+       TAB 1: CLASSIC HUD SYSTEM
+       ───────────────────────────────────────────── */
+    .hud {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 16px;
+    }
+    
+    .top-bar {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      border-bottom: 0.5px solid #142035;
+      padding-bottom: 12px;
+    }
+    .top-left { display: flex; flex-direction: column; gap: 4px; }
+    .top-right { display: flex; flex-direction: column; gap: 4px; text-align: right; }
+    .hud-label { font-size: 9px; color: var(--text-muted); letter-spacing: 3px; text-transform: uppercase; }
+    .hud-value { font-size: 12px; color: var(--text-main); letter-spacing: 2px; }
+    .hud-value.green { color: var(--neon-emerald); }
+    .hud-value.red { color: var(--neon-crimson); }
+    .suit-name { font-size: 22px; font-weight: 700; color: var(--text-main); letter-spacing: 8px; text-align: center; }
+    .suit-sub { font-size: 9px; color: var(--text-muted); letter-spacing: 4px; text-align: center; margin-top: 4px; }
+    
+    .middle {
+      display: grid;
+      grid-template-columns: 290px 1fr 290px;
+      gap: 16px;
+      align-items: start;
+    }
+    
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .stat-label { font-size: 10px; color: var(--text-muted); letter-spacing: 1px; }
+    .stat-val { font-size: 11px; color: var(--text-main); letter-spacing: 1px; }
+    .stat-val.gold { color: var(--neon-gold); }
+    .stat-val.green { color: var(--neon-emerald); }
+    .stat-val.red { color: var(--neon-crimson); }
+    
+    .progress-bar { height: 3px; background: #0f1322; margin-top: 4px; border-radius: 1px; overflow: hidden;}
+    .progress-fill { height: 100%; background: linear-gradient(90deg, var(--neon-purple), var(--neon-cyan)); transition: width 1s; }
+    
+    .center-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+    
+    .orb-wrap {
+      position: relative;
+      width: 220px;
+      height: 220px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 50%;
+    }
+    
+    .orb-core {
+      width: 84px;
+      height: 84px;
+      border-radius: 50%;
+      background: #04060d;
+      border: 1.5px solid var(--neon-cyan);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 2;
+      box-shadow: inset 0 0 10px rgba(0, 240, 255, 0.4);
+    }
+    .orb-title { font-size: 9px; color: var(--neon-cyan); letter-spacing: 2px; }
+    .orb-status { font-size: 7px; color: var(--text-muted); letter-spacing: 1px; margin-top: 3px; }
+    
+    .status-badge {
+      font-size: 10px;
+      color: var(--neon-cyan);
+      letter-spacing: 4px;
+      border: 0.5px solid #142035;
+      padding: 6px 20px;
+      text-transform: uppercase;
+      background: rgba(0, 0, 0, 0.3);
+    }
+    
+    .cmd-log {
+      width: 100%;
+      background: rgba(3, 4, 8, 0.9);
+      border: 1px solid #101625;
+      padding: 12px;
+      height: 160px;
+      overflow-y: auto;
+      border-radius: 3px;
+    }
+    
+    .log-line {
+      font-size: 10px;
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: 1px;
+      margin-bottom: 6px;
+      border-left: 2px solid #142035;
+      padding-left: 8px;
+      line-height: 1.4;
+    }
+    .log-line.active { color: var(--text-main); border-left-color: var(--neon-cyan); }
+    .log-line.aether { color: var(--neon-gold); border-left-color: var(--neon-gold); }
+    .log-line.tool { color: var(--neon-cyan); border-left-color: var(--neon-emerald); font-style: italic; }
+    
+    .cmd-input {
+      display: flex;
+      gap: 8px;
+      width: 100%;
+    }
+    .cmd-input input {
+      flex: 1;
+      background: rgba(3, 4, 8, 0.9);
+      border: 1px solid #142035;
+      color: var(--neon-cyan);
+      font-family: 'Orbitron', monospace;
+      font-size: 10px;
+      padding: 10px;
+      letter-spacing: 2px;
+      outline: none;
+      border-radius: 3px;
+    }
+    .cmd-input input::placeholder { color: #232d3f; }
+    .cmd-input button {
+      background: rgba(10, 15, 30, 0.8);
+      border: 1px solid #142035;
+      color: var(--text-muted);
+      font-family: 'Orbitron', sans-serif;
+      font-size: 9px;
+      padding: 8px 18px;
+      cursor: pointer;
+      letter-spacing: 2px;
+      transition: all 0.2s;
+      border-radius: 3px;
+    }
+    .cmd-input button:hover {
+      background: rgba(15, 25, 45, 0.9);
+      border-color: var(--neon-cyan);
+      color: var(--neon-cyan);
+      box-shadow: var(--glow-shadow);
+    }
+    
+    .news-item {
+      font-size: 8px;
+      color: var(--text-muted);
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+      padding-left: 8px;
+      border-left: 1px solid #142035;
+      line-height: 1.4;
+    }
+    .news-item.hot { color: var(--neon-gold); border-left-color: var(--neon-gold); }
+    
+    .module-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .module-name { font-size: 9px; color: var(--text-muted); }
+    .module-status { font-size: 9px; letter-spacing: 1px; }
+    .module-status.green { color: var(--neon-emerald); }
+    
+    .bottom-bar {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 12px;
+      border-top: 0.5px solid #142035;
+      padding-top: 12px;
+    }
+    .bottom-stat { text-align: center; }
+    .bottom-label { font-size: 7px; color: var(--text-muted); letter-spacing: 2px; text-transform: uppercase; }
+    .bottom-val { font-size: 11px; color: var(--neon-gold); letter-spacing: 1px; margin-top: 3px; }
+    
+    /* ─────────────────────────────────────────────
+       TAB 2: AI WORKBENCH
+       ───────────────────────────────────────────── */
+    .workbench-grid {
+      display: grid;
+      grid-template-columns: 320px 1fr 280px;
+      gap: 16px;
+      align-items: start;
+    }
+    
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+    
+    .form-group label {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 8px;
+      color: var(--text-muted);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    
+    .form-group select, .form-group input[type="text"], .form-group textarea {
+      background: rgba(3, 4, 8, 0.85);
+      border: 1px solid #142035;
+      color: var(--text-main);
+      padding: 8px 10px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 12px;
+      outline: none;
+      border-radius: 3px;
+      transition: border-color 0.2s;
+    }
+    
+    .form-group select:focus, .form-group input[type="text"]:focus, .form-group textarea:focus {
+      border-color: var(--neon-cyan);
+    }
+    
+    .form-group textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+    
+    .form-slider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .form-slider input[type="range"] {
+      flex: 1;
+      accent-color: var(--neon-cyan);
+    }
+    
+    .slider-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--neon-cyan);
+    }
+    
+    .output-console {
+      background: rgba(2, 3, 6, 0.95);
+      border: 1px solid #142035;
+      border-radius: 4px;
+      padding: 16px;
+      height: 480px;
+      overflow-y: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      color: #dfecf7;
+      box-shadow: inset 0 0 15px rgba(0,0,0,0.8);
+      position: relative;
+    }
+    
+    .output-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      font-size: 11px;
+      gap: 12px;
+    }
+    
+    .output-placeholder .spinner {
+      width: 24px;
+      height: 24px;
+      border: 2px solid rgba(0, 240, 255, 0.1);
+      border-top-color: var(--neon-cyan);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      display: none;
+    }
+    
+    .workbench-stats {
+      display: flex;
+      gap: 16px;
+      margin-top: 12px;
+      background: rgba(10, 15, 30, 0.5);
+      padding: 8px 12px;
+      border-radius: 3px;
+      border: 0.5px solid #142035;
+    }
+    
+    .wb-stat-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .wb-stat-lbl { font-size: 8px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+    .wb-stat-val { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--neon-cyan); }
+    
+    .btn-run {
+      background: linear-gradient(135deg, rgba(0, 240, 255, 0.1), rgba(143, 0, 255, 0.1));
+      border: 1px solid var(--neon-cyan);
+      color: var(--neon-cyan);
+      padding: 10px 24px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      cursor: pointer;
+      border-radius: 3px;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    
+    .btn-run:hover {
+      background: linear-gradient(135deg, rgba(0, 240, 255, 0.25), rgba(143, 0, 255, 0.25));
+      box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
+      text-shadow: 0 0 5px var(--neon-cyan);
+    }
+    
+    .prompt-template-card {
+      background: rgba(5, 7, 15, 0.6);
+      border: 0.5px solid #142035;
+      padding: 8px 12px;
+      border-radius: 3px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .prompt-template-card:hover {
+      border-color: var(--neon-cyan);
+      background: rgba(0, 240, 255, 0.05);
+    }
+    
+    .pt-name { font-size: 10px; font-weight: 600; color: var(--text-main); margin-bottom: 2px; }
+    .pt-desc { font-size: 8px; color: var(--text-muted); }
+    
+    /* ─────────────────────────────────────────────
+       TAB 3: CODING SANDBOX
+       ───────────────────────────────────────────── */
+    .sandbox-grid {
+      display: grid;
+      grid-template-columns: 1fr 420px;
+      gap: 16px;
+    }
+    
+    .code-editor-wrap {
+      display: flex;
+      flex-direction: column;
+      border: 1px solid #142035;
+      border-radius: 4px;
+      background: #020306;
+    }
+    
+    .editor-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(8, 10, 20, 0.9);
+      border-bottom: 1px solid #142035;
+      padding: 8px 16px;
+    }
+    
+    .editor-title {
+      font-size: 9px;
+      color: var(--neon-cyan);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    
+    .editor-body {
+      position: relative;
+      display: flex;
+    }
+    
+    .line-numbers {
+      width: 40px;
+      background: rgba(3, 4, 8, 0.6);
+      border-right: 1px solid #142035;
+      padding: 10px 0;
+      text-align: right;
+      color: #232d3f;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      user-select: none;
+      line-height: 1.5;
+      padding-right: 8px;
+    }
+    
+    .code-textarea {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--neon-emerald);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      line-height: 1.5;
+      padding: 10px;
+      resize: none;
+      min-height: 380px;
+    }
+    
+    .terminal-console {
+      background: #000;
+      border: 1px solid var(--neon-crimson);
+      border-radius: 4px;
+      padding: 12px;
+      height: 432px;
+      overflow-y: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: #1aff1a;
+      box-shadow: inset 0 0 15px rgba(0,0,0,0.9);
+    }
+    
+    .terminal-line { margin-bottom: 4px; line-height: 1.4; word-break: break-all; }
+    .terminal-line.error { color: var(--neon-crimson); }
+    .terminal-line.sys { color: var(--neon-cyan); }
+    
+    /* ─────────────────────────────────────────────
+       TAB 4: EXPERIMENT LOG
+       ───────────────────────────────────────────── */
+    .table-wrap {
+      width: 100%;
+      overflow-x: auto;
+      border: 1px solid #142035;
+      border-radius: 4px;
+    }
+    
+    .exp-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      text-align: left;
+    }
+    
+    .exp-table th {
+      background: rgba(10, 15, 30, 0.85);
+      font-family: 'Orbitron', sans-serif;
+      font-size: 8px;
+      letter-spacing: 2px;
+      color: var(--neon-cyan);
+      text-transform: uppercase;
+      padding: 10px 14px;
+      border-bottom: 1px solid #142035;
+    }
+    
+    .exp-table td {
+      padding: 10px 14px;
+      border-bottom: 0.5px solid rgba(20, 32, 53, 0.5);
+      color: var(--text-main);
+    }
+    
+    .exp-table tbody tr:hover {
+      background: rgba(0, 240, 255, 0.03);
+      cursor: pointer;
+    }
+    
+    .star-rating { color: var(--neon-gold); }
+    
+    .search-bar {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 12px;
+      width: 100%;
+    }
+    .search-bar input {
+      flex: 1;
+      background: rgba(3, 4, 8, 0.8);
+      border: 1px solid #142035;
+      color: var(--text-main);
+      padding: 8px 12px;
+      font-size: 11px;
+      outline: none;
+      border-radius: 3px;
+    }
+    
+    /* Modal Detail View */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.85);
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      backdrop-filter: blur(8px);
+    }
+    
+    .modal-content {
+      background: #070914;
+      border: 1px solid var(--neon-cyan);
+      box-shadow: 0 0 30px rgba(0, 240, 255, 0.2);
+      width: 100%;
+      max-width: 800px;
+      border-radius: 4px;
+      display: flex;
+      flex-direction: column;
+      max-height: 90vh;
+    }
+    
+    .modal-header {
+      padding: 12px 18px;
+      border-bottom: 1px solid #142035;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .modal-body {
+      padding: 18px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    
+    .modal-close {
+      background: transparent;
+      border: none;
+      color: var(--neon-crimson);
+      font-size: 18px;
+      cursor: pointer;
+    }
+    
+    .modal-section {
+      background: rgba(13, 17, 33, 0.5);
+      border: 0.5px solid #142035;
+      border-radius: 3px;
+      padding: 10px;
+    }
+    .modal-sec-title { font-family: 'Orbitron', sans-serif; font-size: 8px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+    .modal-sec-content { font-family: 'JetBrains Mono', monospace; font-size: 12px; white-space: pre-wrap; line-height: 1.5; color: #dfecf7; }
+    
+    /* ─────────────────────────────────────────────
+       TAB 5: LEARNING LAB (QUESTS)
+       ───────────────────────────────────────────── */
+    .quests-grid {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 16px;
+    }
+    
+    .quest-card {
+      background: var(--bg-card);
+      border: 1px solid #142035;
+      border-radius: 4px;
+      padding: 16px;
+      margin-bottom: 16px;
+      position: relative;
+    }
+    
+    .quest-card.completed {
+      border-color: var(--neon-emerald);
+      box-shadow: inset 0 0 10px rgba(0, 255, 170, 0.05);
+    }
+    
+    .quest-card.completed::before {
+      background: var(--neon-emerald);
+    }
+    
+    .quest-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    
+    .quest-title { font-size: 14px; font-weight: 600; color: var(--text-main); }
+    .quest-badge {
+      font-size: 8px;
+      color: var(--neon-emerald);
+      border: 1px solid var(--neon-emerald);
+      padding: 2px 8px;
+      text-transform: uppercase;
+      font-family: 'Orbitron', sans-serif;
+      letter-spacing: 1px;
+    }
+    .quest-badge.locked { color: var(--text-muted); border-color: var(--text-muted); }
+    
+    .quest-reward {
+      font-size: 10px;
+      color: var(--neon-gold);
+      margin-bottom: 10px;
+    }
+    
+    .quest-quiz {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 0.5px dashed rgba(20,32,53,0.5);
+    }
+    
+    .quiz-question { font-size: 11px; margin-bottom: 8px; color: var(--text-main); }
+    
+    .quiz-options {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    
+    .quiz-option {
+      background: rgba(3, 4, 8, 0.6);
+      border: 0.5px solid #142035;
+      padding: 8px 12px;
+      border-radius: 3px;
+      font-size: 11px;
+      cursor: pointer;
+      text-align: left;
+      color: var(--text-muted);
+      transition: all 0.2s;
+    }
+    .quiz-option:hover { border-color: var(--neon-cyan); color: var(--text-main); }
+    .quiz-option.correct { background: rgba(0, 255, 170, 0.1); border-color: var(--neon-emerald); color: var(--neon-emerald); }
+    .quiz-option.incorrect { background: rgba(255, 51, 85, 0.1); border-color: var(--neon-crimson); color: var(--neon-crimson); }
+    
+    .colab-btn {
+      background: #e76f51;
+      border: none;
+      color: #fff;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 9px;
+      padding: 6px 12px;
+      cursor: pointer;
+      letter-spacing: 1px;
+      border-radius: 3px;
+      transition: background 0.2s;
+      text-transform: uppercase;
+    }
+    .colab-btn:hover { background: #f4a261; }
+    
+    /* ─────────────────────────────────────────────
+       TAB 6: HARDWARE & BUDGET
+       ───────────────────────────────────────────── */
+    .upgrade-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 16px;
+    }
+    
+    .upgrade-card {
+      background: rgba(5,7,15,0.8);
+      border: 1px solid #142035;
+      padding: 16px;
+      border-radius: 4px;
+      text-align: center;
+      position: relative;
+    }
+    
+    .upgrade-card.locked {
+      opacity: 0.6;
+    }
+    .upgrade-card.unlocked {
+      border-color: var(--neon-emerald);
+      box-shadow: 0 0 10px rgba(0, 255, 170, 0.1);
+    }
+    
+    .up-tier { font-size: 7px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 4px; }
+    .up-name { font-size: 13px; font-weight: 700; color: var(--text-main); margin-bottom: 8px; }
+    .up-cost { font-size: 11px; color: var(--neon-gold); font-family: 'Orbitron', sans-serif; margin-bottom: 12px; }
+    
+    .up-btn {
+      background: transparent;
+      border: 0.5px solid var(--text-muted);
+      color: var(--text-muted);
+      font-family: 'Orbitron', sans-serif;
+      font-size: 8px;
+      padding: 6px 14px;
+      letter-spacing: 1px;
+      cursor: pointer;
+      text-transform: uppercase;
+      border-radius: 2px;
+      transition: all 0.2s;
+    }
+    .up-btn.unlockable {
+      border-color: var(--neon-cyan);
+      color: var(--neon-cyan);
+    }
+    .up-btn.unlockable:hover {
+      background: rgba(0,240,255,0.1);
+      box-shadow: var(--glow-shadow);
+    }
+    .up-btn.active {
+      border-color: var(--neon-emerald);
+      color: var(--neon-emerald);
+      background: rgba(0, 255, 170, 0.05);
+      cursor: default;
+    }
+    
+    .budget-panel {
+      background: var(--bg-card);
+      border: 1px solid #142035;
+      padding: 16px;
+      border-radius: 4px;
+      margin-top: 16px;
+    }
+
+    @media (max-width: 1024px) {
+      .middle {
+        grid-template-columns: 1fr !important;
+      }
+      .workbench-grid {
+        grid-template-columns: 1fr !important;
+      }
+      .sandbox-grid {
+        grid-template-columns: 1fr !important;
+      }
+      .quests-grid {
+        grid-template-columns: 1fr !important;
+      }
+      .upgrade-grid {
+        grid-template-columns: 1fr 1fr !important;
+      }
+      #growth-tab > div {
+        grid-template-columns: 1fr !important;
+      }
+      #assignments-tab > div {
+        grid-template-columns: 1fr !important;
+      }
+      .lab-navigation {
+        flex-wrap: wrap !important;
+        gap: 6px !important;
+        padding: 6px !important;
+      }
+      .tab-btn {
+        padding: 6px 12px !important;
+        font-size: 9px !important;
+      }
+    }
+    
+    @media (max-width: 600px) {
+      .upgrade-grid {
+        grid-template-columns: 1fr !important;
+      }
+      .bottom-bar {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px !important;
+      }
+      .top-bar {
+        grid-template-columns: 1fr !important;
+        gap: 12px !important;
+        text-align: center !important;
+      }
+      .top-right {
+        text-align: center !important;
+      }
+    }
+    
+    /* Cognitive Reasoning Pipeline Styles */
+    .pipeline-step {
+      transition: all 0.4s ease;
+      font-weight: 400;
+      color: var(--text-muted);
+      border: 0.5px solid rgba(255, 255, 255, 0.05);
+      background: rgba(255, 255, 255, 0.01);
+      cursor: default;
+    }
+    .pipeline-step.active-step {
+      color: var(--neon-cyan) !important;
+      border-color: var(--neon-cyan) !important;
+      background: rgba(0, 229, 255, 0.08) !important;
+      text-shadow: 0 0 5px var(--neon-cyan);
+      box-shadow: 0 0 8px rgba(0, 229, 255, 0.15);
+      font-weight: 600;
+    }
+    
+    /* Multi-Agent Room Grid Styles */
+    .agent-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 12px;
+      margin-top: 10px;
+    }
+    .agent-card {
+      background: rgba(5, 5, 8, 0.65);
+      border: 1px solid rgba(0, 229, 255, 0.15);
+      border-radius: 4px;
+      padding: 12px;
+      transition: all 0.3s ease;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    }
+    .agent-card.active {
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 15px rgba(0, 229, 255, 0.15);
+      background: rgba(0, 229, 255, 0.03);
+    }
+    .agent-card.thinking {
+      border-color: var(--neon-purple);
+      box-shadow: 0 0 15px rgba(161, 0, 255, 0.15);
+      background: rgba(161, 0, 255, 0.03);
+      animation: pulse-border 1.5s infinite alternate;
+    }
+    @keyframes pulse-border {
+      from { border-color: rgba(161, 0, 255, 0.15); }
+      to { border-color: rgba(161, 0, 255, 0.6); }
+    }
+    .agent-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 0.5px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 6px;
+      margin-bottom: 8px;
+    }
+    .agent-name {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      color: var(--text-main);
+    }
+    .agent-status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #475569;
+      transition: all 0.3s ease;
+    }
+    .agent-card.active .agent-status-dot {
+      background: var(--neon-cyan);
+      box-shadow: 0 0 8px var(--neon-cyan);
+    }
+    .agent-card.thinking .agent-status-dot {
+      background: var(--neon-purple);
+      box-shadow: 0 0 8px var(--neon-purple);
+    }
+    .agent-metric {
+      display: flex;
+      justify-content: space-between;
+      font-size: 8.5px;
+      margin-bottom: 5px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .metric-label {
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+    .metric-val {
+      color: var(--text-main);
+      max-width: 130px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-align: right;
+    }
+  </style>
+</head>
+<body>
+<div class="corner tl"></div>
+<div class="corner tr"></div>
+<div class="corner bl"></div>
+<div class="corner br"></div>
+<div class="scan-line"></div>
+
+<div class="lab-navigation">
+  <button class="tab-btn active" onclick="switchTab('hud-tab', this)">AETHER Console</button>
+  <button class="tab-btn" onclick="switchTab('assignments-tab', this)">Assignments Portal</button>
+  <button class="tab-btn" onclick="switchTab('workbench-tab', this)">AI Workbench</button>
+  <button class="tab-btn" onclick="switchTab('sandbox-tab', this)">Coding Sandbox</button>
+  <button class="tab-btn" onclick="switchTab('experiments-tab', this)">Experiment Logs</button>
+  <button class="tab-btn" onclick="switchTab('quests-tab', this)">Learning Quests</button>
+  <button class="tab-btn" onclick="switchTab('inventory-tab', this)">Multi-Agent Room</button>
+  <button class="tab-btn" onclick="switchTab('growth-tab', this)">Growth Core</button>
+  <button class="tab-btn" onclick="switchTab('forge-tab', this)">Neural Forge</button>
+</div>
+
+<!-- ─────────────────────────────────────────────
+     TAB 1: CLASSIC JARVIS HUD
+     ───────────────────────────────────────────── -->
+<div id="hud-tab" class="tab-content active">
+  <div class="hud">
+    <div class="top-bar">
+      <div class="top-left">
+        <span class="hud-label">System status</span>
+        <span class="hud-value green">ONLINE</span>
+        <span class="hud-label" style="margin-top:4px;">Location</span>
+        <span class="hud-value" id="hud-location">Andhra Pradesh</span>
+      </div>
+      <div>
+        <div class="suit-name">AETHER AI</div>
+        <div class="suit-sub">v4.0 — Advanced Agentic AI OS</div>
+        <div style="text-align:center;margin-top:8px;">
+          <span class="hud-value" id="clock" style="font-size:16px;">--:--:-- --</span>
+        </div>
+        <div style="text-align:center;margin-top:4px;">
+          <span class="hud-label" id="datestr">--- -- ----</span>
+        </div>
+      </div>
+      <div class="top-right">
+        <span class="hud-label">Battery</span>
+        <span class="hud-value" id="batt-val">-- %</span>
+        <span class="hud-label" style="margin-top:4px;">Charge status</span>
+        <span class="hud-value green" id="batt-status">--</span>
+      </div>
+    </div>
+
+    <div class="middle">
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div class="panel">
+          <div class="panel-title">System vitals</div>
+          <div class="stat-row"><span class="stat-label">Voice engine</span><span class="stat-val green">ACTIVE</span></div>
+          <div class="stat-row"><span class="stat-label">Speech recog</span><span class="stat-val green">LISTENING</span></div>
+          <div class="stat-row"><span class="stat-label">AI brain</span><span class="stat-val green">LLAMA 3.2</span></div>
+          <div class="stat-row"><span class="stat-label">Memory</span><span class="stat-val gold" id="mem-count">-- facts</span></div>
+          <div class="stat-row"><span class="stat-label">Weather</span><span class="stat-val gold" id="weather-val">--</span></div>
+          <div class="stat-row"><span class="stat-label">Remote HUD Link</span><span class="stat-val"><a href="#" id="ngrok-link-hud" target="_blank" style="color:var(--text-muted);text-decoration:none;font-weight:bold;font-family:Orbitron;font-size:9px;">OFFLINE</a></span></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">Today's news</div>
+          <div id="news-container">
+            <div class="news-item">Loading headlines Sir...</div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">Active Mission: Become AI Engineer</div>
+          <div class="stat-row">
+            <span class="stat-label">Mission Progress</span>
+            <span class="stat-val gold" id="hud-level" style="font-family: Orbitron; font-weight: bold;">Level 1</span>
+          </div>
+          <div class="progress-bar" style="margin: 8px 0;"><div class="progress-fill" id="hud-xp-progress" style="width:10%; background: linear-gradient(90deg, var(--neon-cyan), var(--neon-purple)); box-shadow: 0 0 8px var(--neon-cyan);"></div></div>
+          <div style="font-size:8px;color:var(--text-muted);letter-spacing:1px;text-align:right;" id="hud-xp-label">0 / 100 XP</div>
+          
+          <div style="margin-top:10px; border-top: 0.5px solid rgba(255,255,255,0.08); padding-top:8px;">
+            <div style="font-size:8px;color:var(--text-main);margin-bottom:6px;text-transform:uppercase;font-family:Orbitron;letter-spacing:1px;">Campaign Skills Matrix:</div>
+            <div style="display:flex;flex-wrap:wrap;gap:4px;">
+              <span class="skill-tag" style="font-size:7px;padding:3px 6px;border:0.5px solid rgba(0,229,255,0.2);color:var(--neon-cyan);border-radius:2px;background:rgba(0,229,255,0.03);font-family:Orbitron;">DSA</span>
+              <span class="skill-tag" style="font-size:7px;padding:3px 6px;border:0.5px solid rgba(161,0,255,0.2);color:var(--neon-purple);border-radius:2px;background:rgba(161,0,255,0.03);font-family:Orbitron;">SYS DESIGN</span>
+              <span class="skill-tag" style="font-size:7px;padding:3px 6px;border:0.5px solid rgba(0,255,170,0.2);color:var(--neon-emerald);border-radius:2px;background:rgba(0,255,170,0.03);font-family:Orbitron;">PROJECTS</span>
+              <span class="skill-tag" style="font-size:7px;padding:3px 6px;border:0.5px solid rgba(255,215,0,0.2);color:var(--neon-gold);border-radius:2px;background:rgba(255,215,0,0.03);font-family:Orbitron;">RESEARCH</span>
+              <span class="skill-tag" style="font-size:7px;padding:3px 6px;border:0.5px solid rgba(255,85,0,0.2);color:var(--neon-orange);border-radius:2px;background:rgba(255,85,0,0.03);font-family:Orbitron;">RESUME</span>
+              <span class="skill-tag" style="font-size:7px;padding:3px 6px;border:0.5px solid rgba(255,30,0,0.2);color:var(--neon-crimson);border-radius:2px;background:rgba(255,30,0,0.03);font-family:Orbitron;">INTERVIEW</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">Reminders schedule</div>
+          <div id="reminders-list" style="max-height:120px;overflow-y:auto;margin-bottom:8px;">
+            <div class="log-line active">No pending reminders Sir.</div>
+          </div>
+          <div class="cmd-input" style="gap:4px;">
+            <input type="text" id="rem-text" placeholder="REMIND ME TO..." style="font-size:8px;padding:6px;"/>
+            <input type="datetime-local" id="rem-time" style="font-size:8px;padding:6px;color:var(--neon-cyan);background:#05050e;border:0.5px solid #2a2010;font-family:Orbitron,monospace;width:120px;"/>
+            <button onclick="addReminder()" style="font-size:8px;padding:6px 10px;">ADD</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="center-col">
+        <div class="orb-wrap" style="position: relative; overflow: hidden;">
+          <div id="three-orb-container" style="width: 220px; height: 220px; position: absolute; top: 0; left: 0; z-index: 1;"></div>
+          <div class="orb-core" style="z-index: 2; pointer-events: none;">
+            <div class="orb-title">AETHER</div>
+            <div class="orb-status" id="orb-status">READY</div>
+          </div>
+        </div>
+
+        <div class="status-badge" id="main-status">STANDING BY</div>
+        <canvas id="waveform-canvas" width="380" height="40"></canvas>
+
+        <div class="reasoning-pipeline" id="reasoning-pipeline" style="display: none; background: rgba(0, 229, 255, 0.03); border: 0.5px solid rgba(0, 229, 255, 0.15); border-radius: 4px; padding: 10px; margin-bottom: 12px; font-family: 'Orbitron', sans-serif; width: 100%;">
+          <div style="font-size: 8px; color: var(--text-muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px;">Cognitive Pipeline</div>
+          <div style="display: flex; justify-content: space-between; gap: 8px;">
+            <div class="pipeline-step" id="step-thinking" style="flex: 1; text-align: center; font-size: 8px; color: var(--text-muted); border: 0.5px solid rgba(255, 255, 255, 0.05); padding: 6px 2px; border-radius: 2px;">THINKING</div>
+            <div class="pipeline-step" id="step-planning" style="flex: 1; text-align: center; font-size: 8px; color: var(--text-muted); border: 0.5px solid rgba(255, 255, 255, 0.05); padding: 6px 2px; border-radius: 2px;">PLANNING</div>
+            <div class="pipeline-step" id="step-searching" style="flex: 1; text-align: center; font-size: 8px; color: var(--text-muted); border: 0.5px solid rgba(255, 255, 255, 0.05); padding: 6px 2px; border-radius: 2px;">SEARCHING</div>
+            <div class="pipeline-step" id="step-speaking" style="flex: 1; text-align: center; font-size: 8px; color: var(--text-muted); border: 0.5px solid rgba(255, 255, 255, 0.05); padding: 6px 2px; border-radius: 2px;">SPEAKING</div>
+          </div>
+        </div>
+
+        <div class="cmd-log" id="cmd-log">
+          <div class="log-line aether">AETHER: Aether AI OS console online. All systems functional.</div>
+          <div class="log-line aether">AETHER: Memory matrices initialized. Ready for administrator commands.</div>
+          <div class="log-line active">SYS: Waiting for your command Jaswanth.</div>
+        </div>
+
+        <div class="cmd-input" style="position: relative;">
+          <label for="hud-file-upload" style="cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0 10px; color: var(--neon-cyan); background: rgba(0, 0, 0, 0.4); border: 0.5px solid #142035; height: 100%; border-right: none; border-radius: 3px 0 0 3px;" title="Attach PDF or Image">📎</label>
+          <input type="file" id="hud-file-upload" style="display: none;" onchange="uploadHUDFile()"/>
+          <input type="text" id="cmd-text" placeholder="TYPE COMMAND OR ATTACH FILES..." onkeypress="if(event.key==='Enter')sendCommand()"/>
+          <button onclick="sendCommand()">SEND ↗</button>
+        </div>
+        <div id="hud-upload-status" style="font-size: 8px; color: var(--neon-cyan); letter-spacing: 1px; margin-top: 4px; display: none; text-transform: uppercase; font-family: Orbitron, monospace;"></div>
+
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;width:100%;">
+          <button onclick="setMode('listening')" style="background:#05050e;border:0.5px solid #142035;color:var(--text-muted);font-family:Orbitron,monospace;font-size:8px;padding:6px;cursor:pointer;letter-spacing:1px;">LISTEN</button>
+          <button onclick="setMode('speaking')" style="background:#05050e;border:0.5px solid #142035;color:var(--text-muted);font-family:Orbitron,monospace;font-size:8px;padding:6px;cursor:pointer;letter-spacing:1px;">SPEAK</button>
+          <button onclick="setMode('processing')" style="background:#05050e;border:0.5px solid #142035;color:var(--text-muted);font-family:Orbitron,monospace;font-size:8px;padding:6px;cursor:pointer;letter-spacing:1px;">PROCESS</button>
+          <button onclick="setMode('alert')" style="background:#05050e;border:0.5px solid #142035;color:var(--text-muted);font-family:Orbitron,monospace;font-size:8px;padding:6px;cursor:pointer;letter-spacing:1px;">ALERT</button>
+        </div>
+        <div style="display:flex;justify-content:center;margin-top:6px;width:100%;">
+          <label style="font-size:8px;color:var(--text-muted);letter-spacing:1px;display:flex;align-items:center;gap:6px;cursor:pointer;text-transform:uppercase;user-select:none;">
+            <input type="checkbox" id="browser-voice-toggle" style="accent-color:var(--neon-cyan);cursor:pointer;"/> Talk Back on Device (Phone)
+          </label>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div class="panel">
+          <div class="panel-title">Aether modules</div>
+          <div class="module-row"><span class="module-name">Personality Matrix</span><span class="module-status green">ON ✓</span></div>
+          <div class="module-row"><span class="module-name">Daily briefing</span><span class="module-status green">ON ✓</span></div>
+          <div class="module-row"><span class="module-name">Laptop control</span><span class="module-status green">ON ✓</span></div>
+          <div class="module-row"><span class="module-name">Python Sandbox</span><span class="module-status green">ON ✓</span></div>
+          <div class="module-row"><span class="module-name">Speech Core</span><span class="module-status green">ON ✓</span></div>
+          <div class="module-row"><span class="module-name">Local LLM Integrator</span><span class="module-status green">ON ✓</span></div>
+          <div class="module-row"><span class="module-name">Phone link</span><span class="module-status green">ON ✓</span></div>
+          <div class="module-row"><span class="module-name">Hanuman unit</span><span class="module-status" style="color:var(--neon-cyan);">BUILDING</span></div>
+          <div class="module-row"><span class="module-name">Drone swarm</span><span class="module-status" style="color:var(--neon-crimson);">PENDING</span></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">Command history</div>
+          <div id="cmd-history" style="max-height:120px;overflow-y:auto;">
+            <div class="log-line active">SYS: No commands yet Sir.</div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">Threat analysis</div>
+          <div class="stat-row"><span class="stat-label">Threat level</span><span class="stat-val green">CLEAR</span></div>
+          <div class="stat-row"><span class="stat-label">Arc reactor</span><span class="stat-val gold" style="animation:blink 2s infinite;">STABLE</span></div>
+          <div class="stat-row"><span class="stat-label">Credits balance</span><span class="stat-val gold" id="hud-credits">100 C</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bottom-bar">
+      <div class="bottom-stat">
+        <div class="bottom-label">Weather</div>
+        <div class="bottom-val" id="bot-weather">--</div>
+      </div>
+      <div class="bottom-stat">
+        <div class="bottom-label">Battery</div>
+        <div class="bottom-val" id="bot-battery">-- %</div>
+      </div>
+      <div class="bottom-stat">
+        <div class="bottom-label">AI model</div>
+        <div class="bottom-val">LLAMA</div>
+      </div>
+      <div class="bottom-stat">
+        <div class="bottom-label">Memory</div>
+        <div class="bottom-val" id="bot-memory">--</div>
+      </div>
+      <div class="bottom-stat">
+        <div class="bottom-label">Credits</div>
+        <div class="bottom-val" id="bot-credits">--</div>
+      </div>
+      <div class="bottom-stat">
+        <div class="bottom-label">Uptime Status</div>
+        <div class="bottom-val" style="color:var(--neon-emerald);animation:blink 2s infinite;">ONLINE</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────────────
+     TAB 2: AI WORKBENCH
+     ───────────────────────────────────────────── -->
+<div id="workbench-tab" class="tab-content">
+  <div class="workbench-grid">
+    <div class="panel">
+      <div class="panel-title">Lab Settings</div>
+      
+      <div class="form-group">
+        <label>Cognitive Core (Model)</label>
+        <select id="wb-model">
+          <option value="llama3.2">llama3.2 (Local)</option>
+          <option value="phi3">phi3 (Local)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Personality Matrix</label>
+        <select id="wb-personality">
+          <option value="standard">Aether AI (Default)</option>
+          <option value="savage">Savage Mode (Sarcastic Butler)</option>
+          <option value="scientist">Scientific Core (Data Driven)</option>
+          <option value="ultron">Ultron Protocol (Ominous AI)</option>
+          <option value="optimus">Optimus Prime (Heroic Leader)</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label>Core Temperature</label>
+        <div class="form-slider">
+          <input type="range" id="wb-temp" min="0" max="1" step="0.1" value="0.7"/>
+          <span class="slider-val" id="wb-temp-val">0.7</span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>System Instructions</label>
+        <textarea id="wb-system-prompt" placeholder="Define the model's fundamental constraints and instructions..."></textarea>
+      </div>
+
+      <div style="margin-top:20px;display:flex;flex-direction:column;gap:10px;">
+        <button class="btn-run" onclick="runWorkbenchExperiment()">
+          <span>RUN EXPERIMENT</span>
+          <span style="font-size:12px;">⚡</span>
+        </button>
+      </div>
+    </div>
+
+    <div>
+      <div class="output-console" id="wb-output">
+        <div class="output-placeholder">
+          <div class="spinner" id="wb-loading-spinner"></div>
+          <span id="wb-placeholder-text">Waiting for prompt submission...</span>
+        </div>
+      </div>
+      
+      <div class="workbench-stats">
+        <div class="wb-stat-item">
+          <span class="wb-stat-lbl">Inference Engine</span>
+          <span class="wb-stat-val" id="wb-stat-engine">Local Ollama</span>
+        </div>
+        <div class="wb-stat-item">
+          <span class="wb-stat-lbl">Execution Latency</span>
+          <span class="wb-stat-val" id="wb-stat-latency">0.00s</span>
+        </div>
+        <div class="wb-stat-item">
+          <span class="wb-stat-lbl">Output Length</span>
+          <span class="wb-stat-val" id="wb-stat-length">0 chars</span>
+        </div>
+      </div>
+
+      <div style="margin-top:16px;" class="panel">
+        <div class="panel-title">Prompt Injection Node</div>
+        <div class="cmd-input">
+          <input type="text" id="wb-prompt" placeholder="INPUT WORKBENCH PROMPT..." onkeypress="if(event.key==='Enter')runWorkbenchExperiment()"/>
+          <button onclick="runWorkbenchExperiment()">EXECUTE</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Prompt Library</div>
+      <div class="prompt-template-card" onclick="loadPromptTemplate('summarize')">
+        <div class="pt-name">Scientific Summarizer</div>
+        <div class="pt-desc">Condense large bodies of research into key points.</div>
+      </div>
+      <div class="prompt-template-card" onclick="loadPromptTemplate('code')">
+        <div class="pt-name">Refactoring Engineer</div>
+        <div class="pt-desc">Instruct the model to clean, format, and debug code.</div>
+      </div>
+      <div class="prompt-template-card" onclick="loadPromptTemplate('explain')">
+        <div class="pt-name">Quantum Explainer</div>
+        <div class="pt-desc">Breaks down complex machine learning topics.</div>
+      </div>
+      <div class="prompt-template-card" onclick="loadPromptTemplate('savage')">
+        <div class="pt-name">Iron Roast</div>
+        <div class="pt-desc">Get a high-tech sarcastic critique on your scripts.</div>
+      </div>
+    </div>
+
+      <!-- Neural Core Simulator (Stark Upgrade) -->
+      <div class="panel" style="margin-top:16px;border-color:var(--neon-cyan);box-shadow:inset 0 0 15px rgba(0,240,255,0.05);">
+        <div class="panel-title" style="color:var(--neon-cyan);">Neural Core Simulator</div>
+        <p style="font-size:8px;color:var(--text-muted);line-height:1.4;margin-bottom:10px;">
+          Define hyperparameters and run a real gradient descent training loop in python. Plots live loss reduction curve below.
+        </p>
+        
+        <div class="form-group">
+          <label>Epochs</label>
+          <div class="form-slider">
+            <input type="range" id="wb-ml-epochs" min="10" max="200" step="10" value="50"/>
+            <span class="slider-val" id="wb-ml-epochs-val">50</span>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label>Learning Rate</label>
+          <div class="form-slider">
+            <input type="range" id="wb-ml-lr" min="0.001" max="0.2" step="0.005" value="0.01"/>
+            <span class="slider-val" id="wb-ml-lr-val">0.01</span>
+          </div>
+        </div>
+        
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+          <div class="form-group" style="margin-bottom:0;">
+            <label>Optimizer</label>
+            <select id="wb-ml-opt" style="font-size:9px;padding:4px;background:#05070f;border:0.5px solid #142035;color:var(--text-main);outline:none;">
+              <option value="sgd">SGD</option>
+              <option value="adam">Adam</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label>Loss Function</label>
+            <select id="wb-ml-loss" style="font-size:9px;padding:4px;background:#05070f;border:0.5px solid #142035;color:var(--text-main);outline:none;">
+              <option value="mse">MSE</option>
+              <option value="absolute">Absolute</option>
+            </select>
+          </div>
+        </div>
+        
+        <button class="btn-run" onclick="runMLSimulation()" style="width:100%;padding:6px 0;font-size:9px;margin-bottom:12px;margin-top:12px;">
+          <span>LAUNCH TRAINING</span>
+          <span>⚡</span>
+        </button>
+
+        <canvas id="ml-loss-canvas" width="248" height="100" style="background:#020306;border:0.5px solid #142035;display:block;border-radius:2px;"></canvas>
+        <div style="display:flex;justify-content:space-between;font-size:8px;color:var(--text-muted);margin-top:6px;">
+          <span>Loss: <span id="ml-final-loss" style="color:var(--neon-emerald);font-family:monospace;">--</span></span>
+          <span>w: <span id="ml-final-w" style="font-family:monospace;">--</span> | b: <span id="ml-final-b" style="font-family:monospace;">--</span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────────────
+     TAB 3: CODING SANDBOX
+     ───────────────────────────────────────────── -->
+<div id="sandbox-tab" class="tab-content">
+  <div class="sandbox-grid">
+    <div class="code-editor-wrap">
+      <div class="editor-header">
+        <span class="editor-title">Python Lab Sandbox — sandbox_run.py</span>
+        <div>
+          <select id="sandbox-snippet" onchange="loadCodeSnippet()" style="background:#05070f;border:0.5px solid #142035;color:var(--neon-emerald);font-size:10px;padding:4px;outline:none;">
+            <option value="">-- Code Snippets --</option>
+            <option value="api_test">Gemini API Test</option>
+            <option value="ollama_test">Local Ollama Test</option>
+            <option value="math_calc">Model Math Test</option>
+          </select>
+        </div>
+      </div>
+      <div class="editor-body">
+        <div class="line-numbers" id="editor-line-numbers">
+          1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>10<br>11<br>12<br>13<br>14<br>15<br>16<br>17<br>18
+        </div>
+        <textarea class="code-textarea" id="sandbox-code" spellcheck="false" oninput="updateLineNumbers()"># Jarvis Sandbox Python Node
+# Write script to run locally and inspect terminal outputs.
+
+import os
+import sys
+
+print("Initializing sandbox runtime...")
+print(f"Python execution node: {sys.executable}")
+print("System variables loaded.")
+
+# Start your code below...
+print("\nHello Jaswanth, welcome to your AI Sandbox.")
+</textarea>
+      </div>
+      <div style="padding:12px;border-top:1px solid #142035;display:flex;justify-content:space-between;background:rgba(8, 10, 20, 0.5);gap:8px;">
+        <div>
+          <button onclick="clearSandboxTerminal()" class="up-btn">Clear Log</button>
+          <button onclick="reviewSandboxCode()" class="up-btn unlockable">Review Code ⚡</button>
+        </div>
+        <button onclick="executeSandboxCode()" class="btn-run" style="padding:6px 18px;">
+          <span>Execute Script</span>
+          <span>▶</span>
+        </button>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:16px;">
+      <div class="terminal-console" id="sandbox-terminal" style="height: 200px;">
+        <div class="terminal-line sys">SANDBOX TERMINAL ONLINE. Waiting for execution trigger...</div>
+      </div>
+      
+      <div class="panel" style="flex:1;display:flex;flex-direction:column;height:216px;">
+        <div class="panel-title" style="color:var(--neon-gold);display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <span>Stark Code Review Node</span>
+          <button onclick="reviewSandboxCode()" class="up-btn unlockable" style="font-size:8px;padding:2px 8px;">Run Review</button>
+        </div>
+        <div id="sandbox-review-pane" style="font-size:11px;overflow-y:auto;flex:1;color:#f0e6e6;font-family:'JetBrains Mono',monospace;white-space:pre-wrap;line-height:1.4;">
+          <div style="color:var(--text-muted);text-align:center;margin-top:40px;letter-spacing:1px;text-transform:uppercase;">Click 'Run Review' or say 'review code' to inspect your script.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────────────
+     TAB 4: EXPERIMENT LOGS
+     ───────────────────────────────────────────── -->
+<div id="experiments-tab" class="tab-content">
+  <div class="panel">
+    <div class="panel-title">Lab Notebook — Experiment Register</div>
+    
+    <div class="search-bar">
+      <input type="text" id="exp-search" placeholder="FILTER LOGS BY MODEL, KEYWORDS, OR TIMESTAMP..." oninput="filterExperiments()"/>
+    </div>
+
+    <div class="table-wrap">
+      <table class="exp-table" id="exp-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Timestamp</th>
+            <th>Cognitive Core (Model)</th>
+            <th>Prompt Summary</th>
+            <th>Latency</th>
+            <th>Evaluation</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="exp-tbody">
+          <tr>
+            <td colspan="7" style="text-align:center;color:var(--text-muted);">Retrieving notebook records...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Detailed Experiment Modal -->
+<div class="modal-overlay" id="exp-modal" onclick="closeModal(event)">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <span class="panel-title" id="modal-title" style="margin:0;">Experiment Details</span>
+      <button class="modal-close" onclick="document.getElementById('exp-modal').style.display='none'">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;gap:12px;">
+        <div class="modal-section" style="flex:1;">
+          <div class="modal-sec-title">Core Model</div>
+          <div class="modal-sec-content" id="modal-model" style="font-family:Orbitron;color:var(--neon-cyan);">llama3.2</div>
+        </div>
+        <div class="modal-section" style="flex:1;">
+          <div class="modal-sec-title">Speed / Latency</div>
+          <div class="modal-sec-content" id="modal-latency" style="color:var(--neon-emerald);">2.34s</div>
+        </div>
+        <div class="modal-section" style="flex:1;">
+          <div class="modal-sec-title">Rating</div>
+          <div class="modal-sec-content star-rating" id="modal-rating">★★★★★</div>
+        </div>
+      </div>
+      
+      <div class="modal-section">
+        <div class="modal-sec-title">System Instruction</div>
+        <div class="modal-sec-content" id="modal-system-prompt">None</div>
+      </div>
+      <div class="modal-section">
+        <div class="modal-sec-title">User Prompt</div>
+        <div class="modal-sec-content" id="modal-prompt">Hello</div>
+      </div>
+      <div class="modal-section">
+        <div class="modal-sec-title">Cognitive Response</div>
+        <div class="modal-sec-content" id="modal-response" style="color:#ffffff;">Hello Jaswanth!</div>
+      </div>
+      
+      <div class="form-group">
+        <label>Lab Notes & Observations</label>
+        <textarea id="modal-notes-edit" placeholder="Enter notes about this run..."></textarea>
+      </div>
+      <button class="btn-run" onclick="saveActiveModalNotes()" style="padding:6px 12px;font-size:9px;">Save Notes</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────────────
+     TAB 5: LEARNING QUESTS
+     ───────────────────────────────────────────── -->
+<div id="quests-tab" class="tab-content">
+  <div class="quests-grid">
+    <div>
+      <!-- Dynamic AI Quiz Generator from PDFs -->
+      <div class="quest-card" style="border-color:var(--neon-gold);box-shadow:inset 0 0 15px rgba(255,215,0,0.05);">
+        <div class="quest-header">
+          <span class="quest-title" style="color:var(--neon-gold);">Dynamic AI Quiz Generator</span>
+          <span class="quest-badge" style="color:var(--neon-gold);border-color:var(--neon-gold);">STARK UPGRADE</span>
+        </div>
+        <div class="quest-reward">Reward: +40 XP, +15 Credits (Requires score >= 80%)</div>
+        <p style="font-size:12px;color:var(--text-muted);line-height:1.5;margin-bottom:12px;">
+          Select a compiled assignment PDF outline to generate a dynamically customized 5-question MCQ test. Study the content well!
+        </p>
+        
+        <div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <select id="quiz-pdf-selector" style="background:#05070f;border:0.5px solid #2a2010;color:var(--neon-gold);padding:6px;font-size:11px;outline:none;font-family:Orbitron;border-radius:3px;">
+            <option value="">-- Select Compiled PDF --</option>
+          </select>
+          <button class="colab-btn" style="background:var(--neon-gold);color:#000;font-weight:bold;" onclick="generateAIQuiz()">GENERATE DYNAMIC QUIZ</button>
+        </div>
+
+        <!-- Render active generated quiz here -->
+        <div id="dynamic-quiz-container" style="display:none;margin-top:16px;padding-top:16px;border-top:0.5px dashed rgba(20,32,53,0.5);">
+          <!-- Dynamic quiz content -->
+        </div>
+      </div>
+
+      <!-- Quest 1 -->
+      <div class="quest-card" id="q1-card">
+        <div class="quest-header">
+          <span class="quest-title">Quest 1: The Prompt Alchemist</span>
+          <span class="quest-badge" id="q1-badge">Available</span>
+        </div>
+        <div class="quest-reward">Reward: +50 XP, +20 Credits</div>
+        <p style="font-size:12px;color:var(--text-muted);line-height:1.5;margin-bottom:12px;">
+          Learn the principles of structuring prompts for maximum accuracy. Discover the difference between **Zero-Shot** (directly prompting) and **Few-Shot** prompting (providing examples before asking).
+        </p>
+        <div style="margin-bottom:12px;display:flex;gap:8px;">
+          <button class="colab-btn" onclick="window.open('https://colab.research.google.com/drive/17k2k4vH8s8h_8l4xJ8U52qC9bE_sBGlU','_blank')">Open Notebook</button>
+        </div>
+        
+        <div class="quest-quiz" id="q1-quiz">
+          <div class="quiz-question">Which prompting style is defined by supplying the model with output examples before requesting an answer?</div>
+          <div class="quiz-options">
+            <button class="quiz-option" onclick="answerQuiz(1, 0, this)">A) Zero-Shot Prompting</button>
+            <button class="quiz-option" onclick="answerQuiz(1, 1, this)">B) Few-Shot Prompting</button>
+            <button class="quiz-option" onclick="answerQuiz(1, 2, this)">C) Chain of Thought Prompting</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quest 2 -->
+      <div class="quest-card" id="q2-card">
+        <div class="quest-header">
+          <span class="quest-title">Quest 2: Local Core Commander</span>
+          <span class="quest-badge locked" id="q2-badge">Locked (Req Level 2)</span>
+        </div>
+        <div class="quest-reward">Reward: +60 XP, +30 Credits</div>
+        <p style="font-size:12px;color:var(--text-muted);line-height:1.5;margin-bottom:12px;">
+          Explore how to run small, quantized large language models locally on your CPU using Ollama. Understand context lengths and memory parameters.
+        </p>
+        <div style="margin-bottom:12px;display:flex;gap:8px;">
+          <button class="colab-btn" onclick="window.open('https://colab.research.google.com/drive/1tG2R49o8wN5uBf8vP5xU9zJ7kC8fN_hJ','_blank')">Open Notebook</button>
+        </div>
+        
+        <div class="quest-quiz" id="q2-quiz" style="display:none;">
+          <div class="quiz-question">What does quantization (e.g., Q4_K_M) do to a local model?</div>
+          <div class="quiz-options">
+            <button class="quiz-option" onclick="answerQuiz(2, 0, this)">A) Increases model size for better output</button>
+            <button class="quiz-option" onclick="answerQuiz(2, 1, this)">B) Compresses model weights (lowers bits) to save RAM/VRAM</button>
+            <button class="quiz-option" onclick="answerQuiz(2, 2, this)">C) Erases model history after each execution</button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Quest 3 -->
+      <div class="quest-card" id="q3-card">
+        <div class="quest-header">
+          <span class="quest-title">Quest 3: Retrieval Guardian (RAG)</span>
+          <span class="quest-badge locked" id="q3-badge">Locked (Req Level 3)</span>
+        </div>
+        <div class="quest-reward">Reward: +80 XP, +40 Credits</div>
+        <p style="font-size:12px;color:var(--text-muted);line-height:1.5;margin-bottom:12px;">
+          Build a basic Retrieval-Augmented Generation pipeline. Learn to chunk documents, vectorize them using embeddings, and query them.
+        </p>
+        <div class="quest-quiz" id="q3-quiz" style="display:none;">
+          <div class="quiz-question">Why is RAG used when building LLM search engines?</div>
+          <div class="quiz-options">
+            <button class="quiz-option" onclick="answerQuiz(3, 0, this)">A) It allows the model to access dynamic/custom datasets without retraining</button>
+            <button class="quiz-option" onclick="answerQuiz(3, 1, this)">B) It makes the model generate text significantly faster</button>
+            <button class="quiz-option" onclick="answerQuiz(3, 2, this)">C) It translates text from python to binary</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel">
+        <div class="panel-title">Scientist Profile</div>
+        <div class="stat-row"><span class="stat-label">Scientist Level</span><span class="stat-val gold" id="prof-level">Level 1</span></div>
+        <div class="stat-row"><span class="stat-label">Credits Earned</span><span class="stat-val gold" id="prof-credits">100 C</span></div>
+        <div class="stat-row"><span class="stat-label">Total Lab XP</span><span class="stat-val" id="prof-xp">0 XP</span></div>
+        <div class="progress-bar" style="margin:8px 0;"><div class="progress-fill" id="prof-xp-progress" style="width:0%"></div></div>
+        <div style="font-size:8px;color:var(--text-muted);letter-spacing:1px;text-align:right;" id="prof-xp-label">0 / 100 XP to Level Up</div>
+      </div>
+      
+      <div class="panel" style="margin-top:16px;">
+        <div class="panel-title">Cloud Notebook Library</div>
+        <p style="font-size:9px;color:var(--text-muted);line-height:1.4;margin-bottom:10px;">
+          Since you are a student starting on $0 budget, use these free cloud notebooks containing T4 GPUs to run complex training and inference loops.
+        </p>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <button class="colab-btn" style="background:#f8961e;" onclick="window.open('https://colab.research.google.com/','_blank')">Google Colab Dashboard</button>
+          <button class="colab-btn" style="background:#577590;" onclick="window.open('https://www.kaggle.com/code','_blank')">Kaggle Kernels (30 hrs free GPU)</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────────────
+     TAB 6: LAB INVENTORY
+     ───────────────────────────────────────────── -->
+<div id="inventory-tab" class="tab-content">
+  <div style="display:grid;grid-template-columns:1fr 320px;gap:16px;">
+    <div>
+      <div class="panel">
+        <div class="panel-title">Multi-Agent Control Room</div>
+        <p style="font-size:9.5px;color:var(--text-muted);line-height:1.4;margin-bottom:12px;">
+          Monitor real-time cognitive activity, confidence metrics, and task delegations across AETHER's autonomous specialized subagents.
+        </p>
+        <div class="agent-grid">
+          
+          <!-- Planner Agent -->
+          <div class="agent-card active" id="agent-planner">
+            <div class="agent-header">
+              <span class="agent-name">PLANNER AGENT</span>
+              <span class="agent-status-dot"></span>
+            </div>
+            <div class="agent-metric"><span class="metric-label">STATUS</span><span class="metric-val" id="agent-planner-status">IDLE</span></div>
+            <div class="agent-metric"><span class="metric-label">TASK</span><span class="metric-val" id="agent-planner-task">Awaiting objective</span></div>
+            <div class="agent-metric"><span class="metric-label">CONFIDENCE</span><span class="metric-val" id="agent-planner-confidence">98%</span></div>
+            <div class="agent-metric"><span class="metric-label">LAST ACTION</span><span class="metric-val" id="agent-planner-action">Generated steps</span></div>
+          </div>
+          
+          <!-- Researcher Agent -->
+          <div class="agent-card idle" id="agent-researcher">
+            <div class="agent-header">
+              <span class="agent-name">RESEARCHER AGENT</span>
+              <span class="agent-status-dot"></span>
+            </div>
+            <div class="agent-metric"><span class="metric-label">STATUS</span><span class="metric-val" id="agent-researcher-status">IDLE</span></div>
+            <div class="agent-metric"><span class="metric-label">TASK</span><span class="metric-val" id="agent-researcher-task">Standing by</span></div>
+            <div class="agent-metric"><span class="metric-label">CONFIDENCE</span><span class="metric-val" id="agent-researcher-confidence">96%</span></div>
+            <div class="agent-metric"><span class="metric-label">LAST ACTION</span><span class="metric-val" id="agent-researcher-action">Web query</span></div>
+          </div>
+          
+          <!-- Engineer Agent -->
+          <div class="agent-card idle" id="agent-engineer">
+            <div class="agent-header">
+              <span class="agent-name">ENGINEER AGENT</span>
+              <span class="agent-status-dot"></span>
+            </div>
+            <div class="agent-metric"><span class="metric-label">STATUS</span><span class="metric-val" id="agent-engineer-status">IDLE</span></div>
+            <div class="agent-metric"><span class="metric-label">TASK</span><span class="metric-val" id="agent-engineer-task">Sandbox ready</span></div>
+            <div class="agent-metric"><span class="metric-label">CONFIDENCE</span><span class="metric-val" id="agent-engineer-confidence">94%</span></div>
+            <div class="agent-metric"><span class="metric-label">LAST ACTION</span><span class="metric-val" id="agent-engineer-action">Validated sandbox</span></div>
+          </div>
+          
+          <!-- Reviewer Agent -->
+          <div class="agent-card idle" id="agent-reviewer">
+            <div class="agent-header">
+              <span class="agent-name">REVIEWER AGENT</span>
+              <span class="agent-status-dot"></span>
+            </div>
+            <div class="agent-metric"><span class="metric-label">STATUS</span><span class="metric-val" id="agent-reviewer-status">IDLE</span></div>
+            <div class="agent-metric"><span class="metric-label">TASK</span><span class="metric-val" id="agent-reviewer-task">Awaiting code check</span></div>
+            <div class="agent-metric"><span class="metric-label">CONFIDENCE</span><span class="metric-val" id="agent-reviewer-confidence">97%</span></div>
+            <div class="agent-metric"><span class="metric-label">LAST ACTION</span><span class="metric-val" id="agent-reviewer-action">Verified syntax</span></div>
+          </div>
+          
+          <!-- Security Agent -->
+          <div class="agent-card idle" id="agent-security">
+            <div class="agent-header">
+              <span class="agent-name">SECURITY AGENT</span>
+              <span class="agent-status-dot"></span>
+            </div>
+            <div class="agent-metric"><span class="metric-label">STATUS</span><span class="metric-val" id="agent-security-status">IDLE</span></div>
+            <div class="agent-metric"><span class="metric-label">TASK</span><span class="metric-val" id="agent-security-task">Monitoring active lock</span></div>
+            <div class="agent-metric"><span class="metric-label">CONFIDENCE</span><span class="metric-val" id="agent-security-confidence">99%</span></div>
+            <div class="agent-metric"><span class="metric-label">LAST ACTION</span><span class="metric-val" id="agent-security-action">Cleared thread lock</span></div>
+          </div>
+          
+          <!-- Vision Agent -->
+          <div class="agent-card idle" id="agent-vision">
+            <div class="agent-header">
+              <span class="agent-name">VISION AGENT</span>
+              <span class="agent-status-dot"></span>
+            </div>
+            <div class="agent-metric"><span class="metric-label">STATUS</span><span class="metric-val" id="agent-vision-status">IDLE</span></div>
+            <div class="agent-metric"><span class="metric-label">TASK</span><span class="metric-val" id="agent-vision-task">Sensors ready</span></div>
+            <div class="agent-metric"><span class="metric-label">CONFIDENCE</span><span class="metric-val" id="agent-vision-confidence">92%</span></div>
+            <div class="agent-metric"><span class="metric-label">LAST ACTION</span><span class="metric-val" id="agent-vision-action">Analyzed screenshot</span></div>
+          </div>
+          
+          <!-- Memory Agent -->
+          <div class="agent-card idle" id="agent-memory">
+            <div class="agent-header">
+              <span class="agent-name">MEMORY AGENT</span>
+              <span class="agent-status-dot"></span>
+            </div>
+            <div class="agent-metric"><span class="metric-label">STATUS</span><span class="metric-val" id="agent-memory-status">IDLE</span></div>
+            <div class="agent-metric"><span class="metric-label">TASK</span><span class="metric-val" id="agent-memory-task">Syncing semantic DB</span></div>
+            <div class="agent-metric"><span class="metric-label">CONFIDENCE</span><span class="metric-val" id="agent-memory-confidence">95%</span></div>
+            <div class="agent-metric"><span class="metric-label">LAST ACTION</span><span class="metric-val" id="agent-memory-action">Cosine comparison</span></div>
+          </div>
+          
+          <!-- Automation Agent -->
+          <div class="agent-card idle" id="agent-automation">
+            <div class="agent-header">
+              <span class="agent-name">AUTOMATION AGENT</span>
+              <span class="agent-status-dot"></span>
+            </div>
+            <div class="agent-metric"><span class="metric-label">STATUS</span><span class="metric-val" id="agent-automation-status">IDLE</span></div>
+            <div class="agent-metric"><span class="metric-label">TASK</span><span class="metric-val" id="agent-automation-task">Scheduler active</span></div>
+            <div class="agent-metric"><span class="metric-label">CONFIDENCE</span><span class="metric-val" id="agent-automation-confidence">96%</span></div>
+            <div class="agent-metric"><span class="metric-label">LAST ACTION</span><span class="metric-val" id="agent-automation-action">Cron verification</span></div>
+          </div>
+          
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel">
+        <div class="panel-title">Google Gemini Portal</div>
+        <p style="font-size:9px;color:var(--text-muted);line-height:1.4;margin-bottom:12px;">
+          Google's Gemini API key has a **generous free tier** that lets you run state-of-the-art queries for $0. Get a key from Google AI Studio and save it below.
+        </p>
+        <div class="form-group">
+          <label>Gemini API Key</label>
+          <input type="text" id="gemini-key-input" placeholder="PASTE GEMINI KEY HERE..."/>
+        </div>
+        <button onclick="saveGeminiKey()" class="up-btn unlockable" style="width:100%;font-size:9px;padding:8px 0;">SAVE KEY</button>
+        <div style="font-size:8px;color:var(--neon-emerald);margin-top:6px;text-align:center;display:none;" id="key-saved-label">API Key saved in database Sir.</div>
+      </div>
+      
+      <div class="panel" style="margin-top:16px;">
+        <div class="panel-title">Local Engine Control</div>
+        <div class="stat-row">
+          <span class="stat-label">Ollama Engine</span>
+          <span class="stat-val green" id="ollama-status-badge">ONLINE</span>
+        </div>
+        <div style="margin-top:12px;">
+          <button class="up-btn unlockable" style="width:100%;font-size:9px;padding:6px 0;" onclick="refreshModelsList()">Refresh Models</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────────────
+     TAB 8: GROWTH CORE - DAILY GROWTH TRACKER
+     ───────────────────────────────────────────── -->
+<div id="growth-tab" class="tab-content">
+  <div style="display:grid;grid-template-columns:1fr 340px;gap:16px;">
+    <!-- LEFT COLUMN: GOALS & CHALLENGES -->
+    <div>
+      <div class="panel">
+        <div class="panel-title">Daily Self-Improvement Goals</div>
+        <p style="font-size:9px;color:var(--text-muted);line-height:1.4;margin-bottom:12px;">
+          Define and complete daily goals to earn stats and push your limits. Be greater than yesterday!
+        </p>
+
+        <!-- ADD GOAL INPUT -->
+        <div class="cmd-input" style="gap:8px;margin-bottom:16px;">
+          <input type="text" id="growth-goal-input" placeholder="ENTER DAILY GROWTH GOAL (E.G. STUDY MATH, 20 MIN MEDITATION)..." style="flex:1;font-size:10px;padding:8px;"/>
+          <button onclick="addGrowthGoalManual()" class="up-btn active" style="font-size:9px;padding:8px 16px;">ADD GOAL</button>
+        </div>
+
+        <!-- PROGRESS BAR -->
+        <div style="margin-bottom:16px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:10px;margin-bottom:4px;">
+            <span style="color:var(--text-muted);">Today's Completion Progress</span>
+            <span style="color:var(--neon-cyan);font-weight:bold;font-family:Orbitron;" id="growth-progress-label">0%</span>
+          </div>
+          <div class="progress-bar" style="height:6px;background:#0d0d16;"><div class="progress-fill" id="growth-progress-fill" style="width:0%;background:linear-gradient(90deg, var(--neon-cyan), var(--neon-gold));"></div></div>
+        </div>
+
+        <!-- GOALS LIST -->
+        <div id="growth-goals-list" style="display:flex;flex-direction:column;gap:8px;max-height:300px;overflow-y:auto;margin-bottom:8px;">
+          <div style="text-align:center;color:var(--text-muted);padding:16px;">No goals defined. Add one above or tell Rudra to add one!</div>
+        </div>
+      </div>
+
+      <!-- DAILY CHALLENGE -->
+      <div class="panel" style="margin-top:16px;background:rgba(255,69,0,0.05);border-color:rgba(255,69,0,0.2);">
+        <div class="panel-title" style="color:var(--neon-cyan);border-bottom-color:rgba(255,69,0,0.15);">Daily AI Quest Challenge</div>
+        <div style="display:flex;gap:16px;align-items:center;">
+          <div style="font-size:24px;">🔥</div>
+          <div>
+            <div style="font-size:11px;font-weight:bold;color:var(--text-main);margin-bottom:4px;" id="growth-challenge-title">AETHER CHALLENGE</div>
+            <p style="font-size:10px;color:var(--text-muted);line-height:1.4;" id="growth-challenge-text">Loading daily challenge outline...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN: REFLECTION & STATS COMPARISON -->
+    <div style="display:flex;flex-direction:column;gap:16px;">
+      <!-- DAILY REFLECTION -->
+      <div class="panel">
+        <div class="panel-title">Daily Reflection & Rating</div>
+        <p style="font-size:9px;color:var(--text-muted);line-height:1.4;margin-bottom:12px;">
+          Log your end-of-day thoughts and rate your day to earn +10 XP. Reflecting daily cements learning!
+        </p>
+        <div class="form-group">
+          <label>Daily Reflection Log</label>
+          <textarea id="growth-reflection-input" placeholder="Today I learned... what went well... what can be improved..."></textarea>
+        </div>
+        <div class="form-group" style="margin-bottom:16px;">
+          <label>Self-Evaluation Rating</label>
+          <div style="display:flex;gap:8px;font-size:20px;color:var(--text-muted);cursor:pointer;" id="growth-star-rating">
+            <span onclick="setGrowthRating(1)">☆</span>
+            <span onclick="setGrowthRating(2)">☆</span>
+            <span onclick="setGrowthRating(3)">☆</span>
+            <span onclick="setGrowthRating(4)">☆</span>
+            <span onclick="setGrowthRating(5)">☆</span>
+          </div>
+          <span style="font-size:9px;color:var(--neon-cyan);font-family:Orbitron;" id="growth-rating-desc">Unrated</span>
+        </div>
+        <button onclick="submitDailyReflection()" class="up-btn unlockable" style="width:100%;font-size:9px;padding:8px 0;">SUBMIT REFLECTION</button>
+      </div>
+
+      <!-- STATS & COMPARISON -->
+      <div class="panel">
+        <div class="panel-title">Streak & Yesterday comparison</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;text-align:center;margin-bottom:12px;">
+          <div style="background:rgba(0,0,0,0.3);border:0.5px solid #142035;padding:8px;border-radius:2px;">
+            <div style="font-size:7px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;">Growth Streak</div>
+            <div style="font-size:22px;font-weight:700;color:var(--neon-gold);font-family:Orbitron;" id="growth-streak-val">0 days</div>
+          </div>
+          <div style="background:rgba(0,0,0,0.3);border:0.5px solid #142035;padding:8px;border-radius:2px;display:flex;flex-direction:column;justify-content:center;">
+            <div style="font-size:7px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;">VS Yesterday</div>
+            <div style="font-size:12px;font-weight:bold;margin-top:4px;" id="growth-vs-yesterday">--</div>
+          </div>
+        </div>
+
+        <div style="font-size:9px;color:var(--text-muted);margin-bottom:8px;font-weight:bold;text-transform:uppercase;letter-spacing:1px;">5-Day Growth History</div>
+        <div id="growth-history-list" style="display:flex;flex-direction:column;gap:6px;max-height:150px;overflow-y:auto;">
+          <!-- History items go here -->
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────────────
+     TAB 7: ASSIGNMENT COMPILER & PDF PORTAL
+     ───────────────────────────────────────────── -->
+<div id="assignments-tab" class="tab-content">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+    <!-- LEFT COLUMN: DEADLINES TRACKER -->
+    <div class="panel">
+      <div class="panel-title">Academic Deadline Tracker</div>
+      <p style="font-size:9px;color:var(--text-muted);line-height:1.4;margin-bottom:12px;">
+        Track your exams, submissions, and assignment deadlines. Add them via voice or input them manually.
+      </p>
+      
+      <div class="cmd-input" style="gap:8px;margin-bottom:16px;">
+        <input type="text" id="dl-text-input" placeholder="ASSIGNMENT OR TEST NAME..." style="flex:2;font-size:10px;padding:8px;"/>
+        <input type="text" id="dl-time-input" placeholder="DUE DATE (E.G., AUG 15)..." style="flex:1;font-size:10px;padding:8px;"/>
+        <button onclick="addDeadlineManual()" class="up-btn active" style="font-size:9px;padding:8px 16px;">ADD</button>
+      </div>
+
+      <div style="max-height:350px;overflow-y:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:11px;" id="deadlines-table">
+          <thead>
+            <tr style="border-bottom:1px solid #1f2a45;color:var(--text-muted);font-family:Orbitron;font-size:9px;text-align:left;">
+              <th style="padding:8px;">Task</th>
+              <th style="padding:8px;">Due Date</th>
+              <th style="padding:8px;text-align:right;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="deadlines-tbody">
+            <tr>
+              <td colspan="3" style="text-align:center;color:var(--text-muted);padding:16px;">No academic deadlines registered Sir.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN: DOWNLOADS PORTAL -->
+    <div class="panel">
+      <div class="panel-title">Assignments Download Portal</div>
+      <p style="font-size:9px;color:var(--text-muted);line-height:1.4;margin-bottom:12px;">
+        Rudra compiles your notes and outlines into PDF documents on command. Download them directly to your phone below.
+      </p>
+      
+      <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+        <button onclick="loadAssignmentsList()" class="up-btn unlockable" style="font-size:9px;padding:6px 12px;">REFRESH FILES</button>
+      </div>
+
+      <div style="max-height:350px;overflow-y:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:11px;" id="assignments-table">
+          <thead>
+            <tr style="border-bottom:1px solid #1f2a45;color:var(--text-muted);font-family:Orbitron;font-size:9px;text-align:left;">
+              <th style="padding:8px;">Document Name</th>
+              <th style="padding:8px;">File Size</th>
+              <th style="padding:8px;">Generated Date</th>
+              <th style="padding:8px;text-align:right;">Action</th>
+            </tr>
+          </thead>
+          <tbody id="assignments-tbody">
+            <tr>
+              <td colspan="4" style="text-align:center;color:var(--text-muted);padding:16px;">No compiled PDF documents found in assignments folder Sir.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────────────
+     TAB 9: NEURAL FORGE (ML & GPT STUDIO)
+     ───────────────────────────────────────────── -->
+<div id="forge-tab" class="tab-content">
+  <div class="quests-grid" style="grid-template-columns: 1fr 1fr; gap:16px;">
+    <!-- LEFT PANEL: GPT TEXT GENERATOR FORGE -->
+    <div class="panel">
+      <div class="panel-title">GPT Language Model Forge (Char-RNN)</div>
+      
+      <div class="form-group">
+        <label>Training Text Corpus</label>
+        <select id="gpt-corpus-type" onchange="toggleCustomGPTCorpus()">
+          <option value="shakespeare">Shakespeare Sonnets & Hamlet</option>
+          <option value="rudra_code">Rudra OS Source Code (25K chars)</option>
+          <option value="custom">Custom Text Input (Paste Below)</option>
+        </select>
+      </div>
+      
+      <div class="form-group" id="gpt-custom-text-wrap" style="display:none;">
+        <label>Custom Text Input</label>
+        <textarea id="gpt-custom-text" placeholder="Paste your training text corpus here..." style="background:rgba(3,4,8,0.85); border:1px solid #142035; color:var(--text-main); padding:8px; font-family:JetBrains Mono; font-size:11px; height:120px; outline:none; resize:none;"></textarea>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+        <div class="form-group">
+          <label>Training Epochs</label>
+          <input type="number" id="gpt-epochs" min="10" max="5000" value="500"/>
+        </div>
+        <div class="form-group">
+          <label>Hidden Dimension</label>
+          <input type="number" id="gpt-hidden-size" min="32" max="512" value="128"/>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+        <div class="form-group">
+          <label>Sequence Length</label>
+          <input type="number" id="gpt-seq-len" min="10" max="100" value="30"/>
+        </div>
+        <div class="form-group">
+          <label>Learning Rate</label>
+          <input type="number" id="gpt-lr" min="0.001" max="0.5" step="0.01" value="0.08"/>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:10px; margin-top:12px;">
+        <button class="btn-run" id="btn-train-gpt" onclick="startGPTTraining()" style="flex:1;">IGNITE TRAINING ⚡</button>
+        <button class="btn-run" id="btn-stop-gpt" onclick="stopGPTTraining()" style="border-color:var(--neon-crimson); color:var(--neon-crimson); flex:1; display:none;">ABORT TRAINING ✕</button>
+      </div>
+
+      <div class="terminal-console" id="gpt-console" style="height:180px; margin-top:16px;">
+        <div class="terminal-line sys">Neural Forge: Character GPT system online. Waiting for training trigger...</div>
+      </div>
+
+      <!-- Live Sampling Interface -->
+      <div style="margin-top:16px; display:none;" id="gpt-generation-wrap" class="panel">
+        <div class="panel-title" style="font-size:9px;">Model Generation Interface</div>
+        <div style="display:grid; grid-template-columns:1.2fr 0.8fr; gap:10px; margin-bottom:8px;">
+          <div class="form-group">
+            <label>Prompt Seed</label>
+            <input type="text" id="gpt-seed" value="The " style="background:rgba(3,4,8,0.85); border:1px solid #142035; color:var(--text-main); padding:6px; font-size:11px; font-family:JetBrains Mono;"/>
+          </div>
+          <div class="form-group">
+            <label>Sampling Temp</label>
+            <input type="number" id="gpt-temp" min="0.1" max="1.5" step="0.1" value="0.7" style="background:rgba(3,4,8,0.85); border:1px solid #142035; color:var(--text-main); padding:6px; font-size:11px; font-family:Orbitron;"/>
+          </div>
+        </div>
+        <button class="btn-run" onclick="generateGPTText()" style="width:100%;">GENERATE TEXT COMPLETION ↗</button>
+        <div class="terminal-console" id="gpt-gen-output" style="height:100px; margin-top:12px; color:#ffd700; overflow-y:auto; font-family:JetBrains Mono; font-size:11px;"></div>
+      </div>
+    </div>
+
+    <!-- RIGHT PANEL: TABULAR DATASET TRAINER -->
+    <div class="panel">
+      <div class="panel-title">Tabular Dataset ML Studio (Scikit-Learn)</div>
+      
+      <!-- Upload File -->
+      <div class="form-group">
+        <label>Upload Dataset (CSV)</label>
+        <div style="display:flex; gap:8px;">
+          <input type="file" id="ml-csv-file" accept=".csv" style="background:rgba(3,4,8,0.85); border:1px solid #142035; color:var(--text-main); padding:6px; font-size:11px; flex:1;"/>
+          <button onclick="uploadCSVDataset()" style="background:rgba(10,15,30,0.8); border:1px solid #142035; color:var(--neon-cyan); padding:6px 12px; font-family:Orbitron; font-size:10px; cursor:pointer;">UPLOAD</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Select Training Dataset</label>
+        <select id="ml-dataset-select" onchange="onDatasetSelected()">
+          <option value="">-- No Datasets Loaded --</option>
+        </select>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+        <div class="form-group">
+          <label>Target Column (y)</label>
+          <select id="ml-target-col">
+            <option value="">-- Select Target --</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Model Type</label>
+          <select id="ml-model-type">
+            <option value="rf">Random Forest</option>
+            <option value="dt">Decision Tree</option>
+            <option value="lr">Linear/Logistic Regression</option>
+            <option value="svm">Support Vector Machine (SVM)</option>
+          </select>
+        </div>
+      </div>
+
+      <button class="btn-run" onclick="trainTabularModel()" style="width:100%; margin-top:12px;">TRAIN ESTIMATOR MODEL ⚔</button>
+
+      <div class="terminal-console" id="ml-console" style="height:100px; margin-top:16px;">
+        <div class="terminal-line sys">Tabular ML Studio: Ready for dataset selection...</div>
+      </div>
+
+      <!-- Evaluation and Predictions -->
+      <div style="margin-top:16px; display:grid; grid-template-columns: 1.2fr 1fr; gap:12px; opacity:0.3; pointer-events:none;" id="ml-eval-wrap">
+        <div>
+          <div class="panel-title" style="font-size:8px;">Evaluation Matrix Plot</div>
+          <div style="background:rgba(10,5,5,0.4); border:1px solid #142035; border-radius:3px; height:130px; display:flex; align-items:center; justify-content:center; overflow:hidden; position:relative;">
+            <img id="ml-eval-plot" src="" style="max-width:100%; max-height:100%; display:none;"/>
+            <span id="ml-plot-placeholder" style="font-size:8px; color:var(--text-muted); text-transform:uppercase;">No Plot Generated</span>
+          </div>
+        </div>
+        
+        <div>
+          <div class="panel-title" style="font-size:8px;">Predict Query Tester</div>
+          <div id="ml-predict-fields" style="display:flex; flex-direction:column; gap:6px; max-height:100px; overflow-y:auto; padding-right:4px;">
+            <span style="font-size:8px; color:var(--text-muted); text-transform:uppercase;">Train a model to enable query tester.</span>
+          </div>
+          <button class="btn-run" id="btn-ml-predict" onclick="predictTabularQuery()" style="width:100%; margin-top:8px; font-size:9px; padding:6px; display:none;">QUERY MODEL ↗</button>
+          <div id="ml-predict-result" style="font-family:JetBrains Mono; font-size:10px; color:var(--neon-green); margin-top:6px; text-align:center;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let socket = null;
+if (typeof io !== 'undefined') {
+  try {
+    socket = io();
+  } catch(e) {
+    console.warn("Socket.IO client failed to initialize:", e);
+  }
+}
+
+// UI Tabs Switcher
+// Ensure clicking tabs doesn't disrupt visuals
+function switchTab(tabId, btn) {
+  document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(tb => tb.classList.remove('active'));
+  
+  document.getElementById(tabId).classList.add('active');
+  btn.classList.add('active');
+  
+  if (tabId === 'experiments-tab') {
+    loadExperimentsLog();
+  } else if (tabId === 'inventory-tab') {
+    refreshModelsList();
+  } else if (tabId === 'assignments-tab') {
+    loadAssignmentsList();
+    loadDeadlinesList();
+  } else if (tabId === 'growth-tab') {
+    loadGrowthCore();
+  } else if (tabId === 'forge-tab') {
+    loadTabularDatasetsList();
+  }
+}
+
+// ─────────────────────────────────────────────
+//  CLOCK & VITALS LOOPS
+// ─────────────────────────────────────────────
+function pad(n){return String(n).padStart(2,'0');}
+
+function updateClock(){
+  const now = new Date();
+  let h = now.getHours(), m = now.getMinutes(), s = now.getSeconds();
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  document.getElementById('clock').textContent = pad(h)+':'+pad(m)+':'+pad(s)+' '+ampm;
+  const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  document.getElementById('datestr').textContent = months[now.getMonth()]+' '+pad(now.getDate())+' '+now.getFullYear();
+}
+
+function addLog(text, type='active'){
+  const log = document.getElementById('cmd-log');
+  const line = document.createElement('div');
+  line.className = 'log-line '+type;
+  line.textContent = text;
+  log.appendChild(line);
+  log.scrollTop = log.scrollHeight;
+}
+
+function addHistory(text){
+  const history = document.getElementById('cmd-history');
+  const line = document.createElement('div');
+  line.className = 'log-line active';
+  line.textContent = text;
+  history.appendChild(line);
+  history.scrollTop = history.scrollHeight;
+}
+
+let activeState = 'idle';
+function setMode(mode){
+  const statuses = {
+    idle: 'STANDING BY',
+    listening: 'LISTENING...',
+    speaking: 'SPEAKING...',
+    processing: 'PROCESSING...',
+    alert: 'ALERT!',
+    thinking: 'THINKING...',
+    planning: 'PLANNING...',
+    searching: 'SEARCHING...'
+  };
+  document.getElementById('main-status').textContent = statuses[mode] || 'STANDING BY';
+  document.getElementById('orb-status').textContent = mode.toUpperCase();
+  activeState = mode;
+  addLog('MODE: ' + mode.toUpperCase());
+  
+  // Update Reasoning Pipeline steps UI
+  const pipeline = document.getElementById('reasoning-pipeline');
+  if (pipeline) {
+    if (['thinking', 'planning', 'searching', 'speaking'].includes(mode) || mode === 'processing') {
+      pipeline.style.display = 'block';
+      document.querySelectorAll('.pipeline-step').forEach(step => step.classList.remove('active-step'));
+      
+      if (mode === 'thinking') {
+        document.getElementById('step-thinking').classList.add('active-step');
+      } else if (mode === 'planning') {
+        document.getElementById('step-planning').classList.add('active-step');
+      } else if (mode === 'searching' || mode === 'processing') {
+        document.getElementById('step-searching').classList.add('active-step');
+      } else if (mode === 'speaking') {
+        document.getElementById('step-speaking').classList.add('active-step');
+      }
+    } else if (mode === 'idle') {
+      setTimeout(() => {
+        if (activeState === 'idle') {
+          pipeline.style.display = 'none';
+        }
+      }, 2500);
+    }
+  }
+}
+
+function setState(state){
+  setMode(state);
+}
+
+function sendCommand(){
+  const input = document.getElementById('cmd-text');
+  const cmd = input.value.trim();
+  if(!cmd) return;
+  addHistory(cmd);
+  
+  if (typeof window.pywebview !== 'undefined' && window.pywebview.api && window.pywebview.api.send_command) {
+    window.pywebview.api.send_command(cmd);
+  } else {
+    addLog('YOU: '+cmd);
+    if (socket) {
+      socket.emit('command', {command: cmd});
+    } else {
+      console.warn("Socket.IO offline. Command logged via HTTP.");
+    }
+  }
+  input.value = '';
+}
+
+function uploadHUDFile() {
+  const fileInput = document.getElementById('hud-file-upload');
+  if (fileInput.files.length === 0) return;
+  
+  const statusDiv = document.getElementById('hud-upload-status');
+  statusDiv.textContent = "Uploading file to Rudra...";
+  statusDiv.style.display = "block";
+  statusDiv.style.color = "var(--neon-cyan)";
+  
+  const formData = new FormData();
+  formData.append('file', fileInput.files[0]);
+  
+  fetch('/api/upload_media', {
+    method: 'POST',
+    body: formData
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      statusDiv.textContent = `Attached: ${data.filename} (${data.type.toUpperCase()})`;
+      statusDiv.style.color = "var(--neon-green)";
+      addLog(`SYS: Loaded media attachment — ${data.filename}`);
+    } else {
+      statusDiv.textContent = "Upload failed.";
+      statusDiv.style.color = "var(--neon-crimson)";
+    }
+  })
+  .catch(err => {
+    statusDiv.textContent = "Upload error.";
+    statusDiv.style.color = "var(--neon-crimson)";
+  });
+}
+
+function loadStatus(){
+  fetch('/api/status')
+    .then(r => r.json())
+    .then(data => {
+      document.getElementById('batt-val').textContent = (data.battery || '--') + ' %';
+      document.getElementById('batt-status').textContent = data.plugged ? 'CHARGING' : 'ON BATTERY';
+      document.getElementById('weather-val').textContent = data.weather || '--';
+      document.getElementById('bot-weather').textContent = data.weather || '--';
+      document.getElementById('bot-battery').textContent = (data.battery || '--') + ' %';
+      document.getElementById('mem-count').textContent = (data.memory_count || 0) + ' facts';
+      document.getElementById('bot-memory').textContent = (data.memory_count || 0) + ' facts';
+      
+      if (data.location) {
+        document.getElementById('hud-location').textContent = data.location;
+      }
+      
+      const ngLink = document.getElementById('ngrok-link-hud');
+      if (ngLink && data.ngrok_url) {
+        if (data.ngrok_url === 'offline') {
+          ngLink.textContent = 'OFFLINE';
+          ngLink.href = '#';
+          ngLink.style.color = 'var(--text-muted)';
+        } else {
+          ngLink.textContent = 'ONLINE (TAP)';
+          ngLink.href = data.ngrok_url;
+          ngLink.style.color = 'var(--neon-cyan)';
+        }
+      }
+      
+      // Update Quests XP & Level Progress
+      if(data.lab_stats) {
+        updateLabUIStats(data.lab_stats);
+      }
+    })
+    .catch(() => {});
+}
+
+function updateLabUIStats(stats) {
+  document.getElementById('hud-level').textContent = "Level " + stats.level;
+  document.getElementById('prof-level').textContent = "Level " + stats.level;
+  document.getElementById('hud-credits').textContent = stats.credits + " C";
+  document.getElementById('prof-credits').textContent = stats.credits + " C";
+  document.getElementById('bot-credits').textContent = stats.credits + " C";
+  document.getElementById('prof-xp').textContent = stats.xp + " XP";
+  
+  // Calculate relative XP for progress bar
+  let relativeXp = stats.xp % 100;
+  document.getElementById('hud-xp-progress').style.width = relativeXp + "%";
+  document.getElementById('prof-xp-progress').style.width = relativeXp + "%";
+  document.getElementById('hud-xp-label').textContent = relativeXp + " / 100 XP";
+  document.getElementById('prof-xp-label').textContent = (100 - relativeXp) + " XP to Level " + (stats.level + 1);
+  
+  // Unlock levels in Quest layout
+  if(stats.level >= 2) {
+    document.getElementById('q2-badge').textContent = "Available";
+    document.getElementById('q2-badge').classList.remove('locked');
+    document.getElementById('q2-quiz').style.display = 'block';
+  }
+  if(stats.level >= 3) {
+    document.getElementById('q3-badge').textContent = "Available";
+    document.getElementById('q3-badge').classList.remove('locked');
+    document.getElementById('q3-quiz').style.display = 'block';
+  }
+  
+  // Unlock options in hardware shop
+  let unlocked = stats.unlocked_upgrades || [];
+  unlocked.forEach(upKey => {
+    let card = document.getElementById('up-' + upKey);
+    let btn = document.getElementById('btn-up-' + upKey);
+    if(card) {
+      card.classList.remove('locked');
+      card.classList.add('unlocked');
+    }
+    if(btn) {
+      btn.textContent = "Active";
+      btn.className = "up-btn active";
+      btn.onclick = null;
+    }
+  });
+  
+  // Style unlockable items
+  let upgradeList = [
+    {key: 'gtx', cost: 120},
+    {key: 'rtx4060', cost: 300},
+    {key: 'rtx4090', cost: 800}
+  ];
+  upgradeList.forEach(up => {
+    let btn = document.getElementById('btn-up-' + up.key);
+    if(btn && btn.textContent !== "Active") {
+      if(stats.credits >= up.cost) {
+        btn.textContent = "Unlock Upgrade";
+        btn.className = "up-btn unlockable";
+      } else {
+        btn.textContent = "Locked";
+        btn.className = "up-btn";
+      }
+    }
+  });
+}
+
+function loadNews(){
+  fetch('/api/news')
+    .then(r => r.json())
+    .then(data => {
+      const container = document.getElementById('news-container');
+      container.innerHTML = '';
+      data.headlines.forEach((h, i) => {
+        const div = document.createElement('div');
+        div.className = 'news-item' + (i < 2 ? ' hot' : '');
+        div.textContent = h;
+        container.appendChild(div);
+      });
+    })
+    .catch(() => {});
+}
+
+// ─────────────────────────────────────────────
+//  SOCKET RESPONDERS
+// ─────────────────────────────────────────────
+
+if (socket) {
+  socket.on('status_update', data => {
+    if(data.battery) {
+      document.getElementById('batt-val').textContent = data.battery + ' %';
+      document.getElementById('bot-battery').textContent = data.battery + ' %';
+      document.getElementById('batt-status').textContent = data.plugged ? 'CHARGING' : 'ON BATTERY';
+    }
+  });
+}
+
+function speakInBrowser(text) {
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 1.0;
+    
+    // Attempt to pick a good natural/deep voice if available
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length > 0) {
+      const preferred = voices.find(v => v.name.includes('Google') || v.name.includes('David') || v.name.includes('Male'));
+      if (preferred) utterance.voice = preferred;
+    }
+    window.speechSynthesis.speak(utterance);
+  }
+}
+
+// Trigger browser voices list load on startup
+if ('speechSynthesis' in window) {
+  window.speechSynthesis.getVoices();
+}
+
+function updateAgentStatus(agent, status, task, confidence, action) {
+  const card = document.getElementById(`agent-${agent.toLowerCase()}`);
+  if (!card) return;
+  
+  card.className = `agent-card ${status.toLowerCase()}`;
+  
+  const statusEl = document.getElementById(`agent-${agent.toLowerCase()}-status`);
+  const taskEl = document.getElementById(`agent-${agent.toLowerCase()}-task`);
+  const confEl = document.getElementById(`agent-${agent.toLowerCase()}-confidence`);
+  const actEl = document.getElementById(`agent-${agent.toLowerCase()}-action`);
+  
+  if (statusEl) statusEl.textContent = status.toUpperCase();
+  if (taskEl) taskEl.textContent = task;
+  if (confEl) confEl.textContent = confidence;
+  if (actEl) actEl.textContent = action;
+}
+
+if (socket) {
+  socket.on('response_hud', data => {
+    const sender = data.sender || 'AETHER';
+    if (sender === 'YOU') {
+      addLog('YOU: ' + data.message);
+    } else if (sender === 'AETHER' || sender === 'JARVIS') {
+      addLog('AETHER: ' + data.message, 'aether');
+    } else if (sender === 'TOOL') {
+      addLog('[TOOL] ' + data.message, 'tool');
+    } else {
+      addLog('SYS: ' + data.message);
+    }
+  });
+  socket.on('state_update', data => {
+    if (data.state) {
+      setState(data.state);
+    }
+  });
+  socket.on('agent_update', data => {
+    if (data.agent && data.status) {
+      updateAgentStatus(data.agent, data.status, data.task || '', data.confidence || '', data.action || '');
+    }
+  });
+  socket.on('otp_alert', data => {
+    // Show alert in console
+    addLog('[SECURITY ALERT] 18+ content verification code generated: ' + data.otp, 'sys');
+    // If browser voice toggle is checked, speak it locally too
+    if (document.getElementById('browser-voice-toggle').checked) {
+      speakInBrowser("restricted content locked. Verification code generated: " + data.otp.split("").join(" "));
+    }
+  });
+}
+
+// ─────────────────────────────────────────────
+//  REMINDERS LOGIC
+// ─────────────────────────────────────────────
+
+function loadReminders(){
+  fetch('/api/reminders')
+    .then(r => r.json())
+    .then(data => {
+      const list = document.getElementById('reminders-list');
+      list.innerHTML = '';
+      if(!data.reminders || data.reminders.length === 0){
+        list.innerHTML = '<div class="log-line active">No pending reminders Sir.</div>';
+        return;
+      }
+      data.reminders.forEach(r => {
+        const item = document.createElement('div');
+        item.className = 'log-line active';
+        item.style.display = 'flex';
+        item.style.justify = 'space-between';
+        item.style.alignItems = 'center';
+        
+        const textSpan = document.createElement('span');
+        textSpan.innerHTML = (r.spoken ? '<span style="color:#6a5a3a;text-decoration:line-through;">[DONE] ' : '[PENDING] ') + r.text + ' (' + r.time + ')</span>';
+        
+        const delBtn = document.createElement('button');
+        delBtn.textContent = '✕';
+        delBtn.style.background = 'transparent';
+        delBtn.style.border = 'none';
+        delBtn.style.color = '#cc4444';
+        delBtn.style.cursor = 'pointer';
+        delBtn.style.marginLeft = '8px';
+        delBtn.onclick = () => deleteReminder(r.id);
+        
+        item.appendChild(textSpan);
+        item.appendChild(delBtn);
+        list.appendChild(item);
+      });
+    })
+    .catch(() => {});
+}
+
+function addReminder(){
+  const textInput = document.getElementById('rem-text');
+  const timeInput = document.getElementById('rem-time');
+  const text = textInput.value.trim();
+  const rawTime = timeInput.value;
+  if(!text || !rawTime) {
+    alert('Sir, please specify both text and time.');
+    return;
+  }
+  const time = rawTime.replace('T', ' ');
+  fetch('/api/reminders', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text, time })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if(data.success){
+      textInput.value = '';
+      timeInput.value = '';
+      loadReminders();
+      addLog('SYS: Scheduled reminder: ' + text);
+    }
+  })
+  .catch(() => {});
+}
+
+function deleteReminder(id){
+  fetch('/api/reminders/' + id, { method: 'DELETE' })
+    .then(r => r.json())
+    .then(data => {
+      if(data.success) {
+        loadReminders();
+        addLog('SYS: Removed reminder.');
+      }
+    });
+}
+
+// ─────────────────────────────────────────────
+//  NEW AI WORKBENCH FEATURES
+// ─────────────────────────────────────────────
+
+function refreshModelsList() {
+  fetch('/api/models')
+    .then(r => r.json())
+    .then(data => {
+      // Update local status indicators
+      let statusBadge = document.getElementById('ollama-status-badge');
+      if(data.ollama_online) {
+        statusBadge.textContent = "ONLINE";
+        statusBadge.className = "stat-val green";
+      } else {
+        statusBadge.textContent = "OFFLINE";
+        statusBadge.className = "stat-val red";
+      }
+      
+      let select = document.getElementById('wb-model');
+      select.innerHTML = '';
+      data.models.forEach(m => {
+        let opt = document.createElement('option');
+        opt.value = m.name;
+        opt.textContent = m.name + " (" + m.size + ")";
+        select.appendChild(opt);
+      });
+    })
+    .catch(() => {});
+}
+
+// Temperature Slider Value Updates
+document.getElementById('wb-temp').addEventListener('input', e => {
+  document.getElementById('wb-temp-val').textContent = e.target.value;
+});
+
+function loadPromptTemplate(type) {
+  let sys = document.getElementById('wb-system-prompt');
+  let prompt = document.getElementById('wb-prompt');
+  
+  if (type === 'summarize') {
+    sys.value = "You are a scientific summarization engine. Condense the text provided, highlighting core methodology, outcomes, and data. Respond strictly with key bullets.";
+    prompt.value = "Paste your long scientific article here...";
+  } else if (type === 'code') {
+    sys.value = "You are a senior software refactoring node. Inspect the Python code block. Correct inefficiencies, optimize variables, format appropriately, and document with comments. Do not include markdown code block characters.";
+    prompt.value = "def add(a, b): return a + b # Refactor this...";
+  } else if (type === 'explain') {
+    sys.value = "You are Aether AI operating as a science professor. Explain the requested Machine Learning concepts using intuitive analogies and mathematical equations where appropriate.";
+    prompt.value = "Explain the mechanics of a Vector Database and Cosine Similarity.";
+  } else if (type === 'savage') {
+    sys.value = "";
+    document.getElementById('wb-personality').value = 'savage';
+    prompt.value = "Aether, review my plan to study python for 4 hours straight on a Sunday morning.";
+  }
+}
+
+function runWorkbenchExperiment() {
+  const model = document.getElementById('wb-model').value;
+  const sysPrompt = document.getElementById('wb-system-prompt').value;
+  const prompt = document.getElementById('wb-prompt').value.trim();
+  const temperature = document.getElementById('wb-temp').value;
+  const personality = document.getElementById('wb-personality').value;
+  
+  if(!prompt) {
+    alert("Sir, prompt input cannot be empty.");
+    return;
+  }
+  
+  // Show spinner
+  document.getElementById('wb-loading-spinner').style.display = 'block';
+  document.getElementById('wb-placeholder-text').textContent = 'EXCHANGING CORE DATA...';
+  setState('processing');
+  
+  fetch('/api/run_prompt', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      model,
+      system_prompt: sysPrompt,
+      prompt,
+      temperature,
+      personality
+    })
+  })
+  .then(r => r.json())
+  .then(data => {
+    document.getElementById('wb-loading-spinner').style.display = 'none';
+    setState('idle');
+    
+    if (data.success) {
+      // Render text output
+      document.getElementById('wb-output').innerHTML = '<div style="white-space: pre-wrap;">' + data.response + '</div>';
+      
+      // Update statistics
+      document.getElementById('wb-stat-engine').textContent = model.includes('gemini') ? 'Gemini API' : 'Ollama local';
+      document.getElementById('wb-stat-latency').textContent = data.latency;
+      document.getElementById('wb-stat-length').textContent = data.response.length + " chars";
+      
+      // Log Experiment Option Modal / Star Evaluation Prompt
+      logAutoExperiment(model, sysPrompt, prompt, data.response, data.latency);
+      
+      // Add XP & Credits for training prompt
+      awardLabXP(15, 5); // 15 XP, 5 Credits
+    } else {
+      document.getElementById('wb-output').textContent = "CRITICAL FAILURE: " + data.error;
+    }
+  })
+  .catch(err => {
+    document.getElementById('wb-loading-spinner').style.display = 'none';
+    setState('idle');
+    document.getElementById('wb-output').textContent = "ERROR: " + err;
+  });
+}
+
+function logAutoExperiment(model, sysPrompt, prompt, response, latency) {
+  let rate = prompt.length > 50 ? 5 : 4; // Auto evaluator rating
+  fetch('/api/experiments', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      model,
+      system_prompt: sysPrompt,
+      prompt,
+      response,
+      latency,
+      rating: rate,
+      notes: 'Auto-recorded run.'
+    })
+  });
+}
+
+// ─────────────────────────────────────────────
+//  SANDBOX PYTHON CODING Sandbox
+// ─────────────────────────────────────────────
+
+function updateLineNumbers() {
+  const editor = document.getElementById('sandbox-code');
+  const lines = editor.value.split('\n').length;
+  let numbersHtml = '';
+  for(let i=1; i<=Math.max(lines, 18); i++) {
+    numbersHtml += i + '<br>';
+  }
+  document.getElementById('editor-line-numbers').innerHTML = numbersHtml;
+}
+
+function loadCodeSnippet() {
+  const val = document.getElementById('sandbox-snippet').value;
+  const editor = document.getElementById('sandbox-code');
+  
+  if(val === 'api_test') {
+    editor.value = `# Gemini API HTTP Test (Standard Requests)
+import requests
+import json
+
+API_KEY = "YourSavedKey" # Will fetch key from memory.json
+# Test a basic payload
+print("Sandbox compiling endpoint test...")
+print("Call status: OK")
+`;
+  } else if (val === 'ollama_test') {
+    editor.value = `# Ollama Local Brain Test
+import ollama
+
+try:
+    print("Testing connection to local Ollama...")
+    res = ollama.list()
+    print("Models found:")
+    for m in res.get('models', []):
+        print(f" - {m['name']} ({m['size'] / (1024**3):.2f} GB)")
+except Exception as e:
+    print(f"Failed to connect to local Ollama: {e}")
+`;
+  } else if (val === 'math_calc') {
+    editor.value = `# Mathematical Model Loss Calculus
+import math
+
+def calculate_cross_entropy(y_pred, y_true):
+    loss = -sum([y_true[i] * math.log(y_pred[i]) for i in range(len(y_true))])
+    return loss
+
+# Mock probabilities
+actual = [1.0, 0.0, 0.0]
+predicted = [0.8, 0.1, 0.1]
+loss = calculate_cross_entropy(predicted, actual)
+print(f"Calculated Cross-Entropy Loss: {loss:.6f}")
+`;
+  }
+  updateLineNumbers();
+}
+
+function clearSandboxTerminal() {
+  document.getElementById('sandbox-terminal').innerHTML = '<div class="terminal-line sys">SANDBOX TERMINAL CLEANED. Standing by...</div>';
+}
+
+function executeSandboxCode() {
+  const code = document.getElementById('sandbox-code').value;
+  const term = document.getElementById('sandbox-terminal');
+  
+  let line = document.createElement('div');
+  line.className = 'terminal-line sys';
+  line.textContent = '$ executing sandbox_run.py...';
+  term.appendChild(line);
+  term.scrollTop = term.scrollHeight;
+  setState('processing');
+  
+  fetch('/api/run_code', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ code })
+  })
+  .then(r => r.json())
+  .then(data => {
+    setState('idle');
+    if(data.success) {
+      if(data.stdout) {
+        let stdoutLine = document.createElement('div');
+        stdoutLine.className = 'terminal-line';
+        stdoutLine.textContent = data.stdout;
+        term.appendChild(stdoutLine);
+      }
+      if(data.stderr) {
+        let stderrLine = document.createElement('div');
+        stderrLine.className = 'terminal-line error';
+        stderrLine.textContent = data.stderr;
+        term.appendChild(stderrLine);
+      }
+      if(!data.stdout && !data.stderr) {
+        let noOut = document.createElement('div');
+        noOut.className = 'terminal-line sys';
+        noOut.textContent = 'Script executed (Exit code 0, no output).';
+        term.appendChild(noOut);
+      }
+      // Reward credits for script writing
+      awardLabXP(30, 10);
+    } else {
+      let errLine = document.createElement('div');
+      errLine.className = 'terminal-line error';
+      errLine.textContent = data.error;
+      term.appendChild(errLine);
+    }
+    term.scrollTop = term.scrollHeight;
+  })
+  .catch(err => {
+    setState('idle');
+    let errLine = document.createElement('div');
+    errLine.className = 'terminal-line error';
+    errLine.textContent = 'Execution failed: ' + err;
+    term.appendChild(errLine);
+    term.scrollTop = term.scrollHeight;
+  });
+}
+
+// ─────────────────────────────────────────────
+//  EXPERIMENTS LOGGING TABLE
+// ─────────────────────────────────────────────
+
+let activeExperiments = [];
+function loadExperimentsLog() {
+  fetch('/api/experiments')
+    .then(r => r.json())
+    .then(data => {
+      activeExperiments = data.experiments || [];
+      renderExperimentsTable(activeExperiments);
+    });
+}
+
+function renderExperimentsTable(list) {
+  const tbody = document.getElementById('exp-tbody');
+  tbody.innerHTML = '';
+  if (list.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);">No recorded experiments in log files Sir.</td></tr>';
+    return;
+  }
+  list.forEach(e => {
+    let tr = document.createElement('tr');
+    tr.onclick = () => openExperimentModal(e.id);
+    
+    let stars = '★'.repeat(e.rating) + '☆'.repeat(5 - e.rating);
+    let promptExcerpt = e.prompt.length > 50 ? e.prompt.substring(0, 50) + "..." : e.prompt;
+    
+    tr.innerHTML = `
+      <td>${e.id}</td>
+      <td>${e.timestamp}</td>
+      <td style="color:var(--neon-cyan);font-family:Orbitron;">${e.model}</td>
+      <td style="font-family:monospace;">${promptExcerpt}</td>
+      <td style="color:var(--neon-emerald);font-family:JetBrains Mono;">${e.latency}</td>
+      <td class="star-rating">${stars}</td>
+      <td>
+        <button onclick="event.stopPropagation(); deleteExperimentLog(${e.id})" style="background:transparent;border:none;color:var(--neon-crimson);cursor:pointer;font-size:12px;">DELETE</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function filterExperiments() {
+  const val = document.getElementById('exp-search').value.toLowerCase();
+  const filtered = activeExperiments.filter(e => {
+    return e.model.toLowerCase().includes(val) || e.prompt.toLowerCase().includes(val) || e.response.toLowerCase().includes(val);
+  });
+  renderExperimentsTable(filtered);
+}
+
+function deleteExperimentLog(id) {
+  if(confirm('Sir, are you sure you want to erase this experiment record?')) {
+    fetch('/api/experiments/' + id, { method: 'DELETE' })
+      .then(r => r.json())
+      .then(data => {
+        if(data.success) {
+          loadExperimentsLog();
+        }
+      });
+  }
+}
+
+// Modal actions
+let activeModalId = null;
+function openExperimentModal(id) {
+  const exp = activeExperiments.find(e => e.id === id);
+  if(!exp) return;
+  activeModalId = id;
+  
+  document.getElementById('modal-title').textContent = "Experiment Log #" + exp.id;
+  document.getElementById('modal-model').textContent = exp.model;
+  document.getElementById('modal-latency').textContent = exp.latency;
+  document.getElementById('modal-rating').textContent = '★'.repeat(exp.rating) + '☆'.repeat(5 - exp.rating);
+  document.getElementById('modal-system-prompt').textContent = exp.system_prompt || 'None';
+  document.getElementById('modal-prompt').textContent = exp.prompt;
+  document.getElementById('modal-response').textContent = exp.response;
+  document.getElementById('modal-notes-edit').value = exp.notes || '';
+  
+  document.getElementById('exp-modal').style.display = 'flex';
+}
+
+function saveActiveModalNotes() {
+  const notes = document.getElementById('modal-notes-edit').value;
+  // Put notes inside memory and post
+  const exp = activeExperiments.find(e => e.id === activeModalId);
+  if(!exp) return;
+  
+  fetch('/api/experiments', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      id: exp.id,
+      model: exp.model,
+      system_prompt: exp.system_prompt,
+      prompt: exp.prompt,
+      response: exp.response,
+      latency: exp.latency,
+      rating: exp.rating,
+      notes: notes
+    })
+  })
+  .then(() => {
+    document.getElementById('exp-modal').style.display = 'none';
+    loadExperimentsLog();
+  });
+}
+
+function closeModal(event) {
+  if (event.target === document.getElementById('exp-modal')) {
+    document.getElementById('exp-modal').style.display = 'none';
+  }
+}
+
+// ─────────────────────────────────────────────
+//  LEARNING QUESTS & XP
+// ─────────────────────────────────────────────
+
+function awardLabXP(xp, credits) {
+  fetch('/api/update_lab_stats', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ xp, credits })
+  })
+  .then(() => loadStatus());
+}
+
+function answerQuiz(questNum, optionIndex, btn) {
+  const answers = { 1: 1, 2: 1, 3: 0 }; // Correct indices
+  const buttons = btn.parentElement.querySelectorAll('.quiz-option');
+  
+  // Disable all options
+  buttons.forEach(b => b.disabled = true);
+  
+  if (optionIndex === answers[questNum]) {
+    btn.classList.add('correct');
+    addLog('SYS: Quiz #' + questNum + ' answered correctly! Awarding stats...');
+    // Award XP
+    if (questNum === 1) {
+      awardLabXP(50, 20);
+    } else if (questNum === 2) {
+      awardLabXP(60, 30);
+    } else if (questNum === 3) {
+      awardLabXP(80, 40);
+    }
+  } else {
+    btn.classList.add('incorrect');
+    buttons[answers[questNum]].classList.add('correct'); // Show correct answer
+    addLog('SYS: Quiz #' + questNum + ' answered incorrectly. Review references and retry.');
+  }
+}
+
+// ─────────────────────────────────────────────
+//  INVENTORY & UPGRADES
+// ─────────────────────────────────────────────
+
+function saveGeminiKey() {
+  const key = document.getElementById('gemini-key-input').value.trim();
+  if(!key) return;
+  fetch('/api/save_gemini_key', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ key })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if(data.success) {
+      let lbl = document.getElementById('key-saved-label');
+      lbl.style.display = 'block';
+      setTimeout(() => lbl.style.display = 'none', 3000);
+      addLog('SYS: Gemini Authtoken saved securely.');
+    }
+  });
+}
+
+// ─────────────────────────────────────────────
+//  3D WEBGL HOLO-CORE VISUALIZER (THREE.JS)
+// ─────────────────────────────────────────────
+
+let renderer, scene, camera, points, positionAttr, colorAttr;
+let visualTime = 0;
+const particleCount = 4000;
+let wCanvas = null;
+let wCtx = null;
+let waveData = [];
+const WAVE_LEN = 60;
+for (let i = 0; i < WAVE_LEN; i++) waveData.push(0);
+
+const CORE_STATES = {
+  idle:       { r: 1.0,  g: 0.27, b: 0.0  }, // Flame Orange
+  listening:  { r: 0.0,  g: 1.0,  b: 0.66 }, // Emerald Green/Teal
+  speaking:   { r: 1.0,  g: 0.0,  b: 0.33 }, // Crimson Pink
+  processing: { r: 1.0,  g: 0.84, b: 0.0  }, // Gold
+  alert:      { r: 1.0,  g: 0.0,  b: 0.0  }, // Pure Hot Red
+};
+
+function initThreeOrb() {
+  try {
+    const container = document.getElementById('three-orb-container');
+    if (!container) return;
+    
+    if (typeof THREE === 'undefined') {
+      throw new Error("THREE.js library is not loaded. Browser may be offline.");
+    }
+    
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
+    camera.position.z = 18;
+    
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    container.appendChild(renderer.domElement);
+    
+    const geometry = new THREE.BufferGeometry();
+    const positions = new Float32Array(particleCount * 3);
+    const colors = new Float32Array(particleCount * 3);
+    const defaultColor = new THREE.Color('#ff4500');
+    
+    for (let i = 0; i < particleCount * 3; i += 3) {
+      const u = Math.random();
+      const v = Math.random();
+      const theta = u * 2.0 * Math.PI;
+      const phi = Math.acos(2.0 * v - 1.0);
+      const r = 3.0 + Math.random() * 0.6;
+      
+      positions[i] = r * Math.sin(phi) * Math.cos(theta);
+      positions[i+1] = r * Math.sin(phi) * Math.sin(theta);
+      positions[i+2] = r * Math.cos(phi);
+      
+      colors[i] = defaultColor.r;
+      colors[i+1] = defaultColor.g;
+      colors[i+2] = defaultColor.b;
+    }
+    
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    
+    const material = new THREE.PointsMaterial({
+      size: 0.11,
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.8,
+      blending: THREE.AdditiveBlending
+    });
+    
+    points = new THREE.Points(geometry, material);
+    scene.add(points);
+    
+    animateOrb();
+  } catch (e) {
+    console.warn("3D visualizer initialization failed. Running 2D canvas/CSS fallback core:", e);
+    const container = document.getElementById('three-orb-container');
+    if (container) {
+      container.innerHTML = `
+        <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
+          <div style="width: 130px; height: 130px; border-radius: 50%; border: 1.5px dashed var(--neon-cyan); animation: spin 12s linear infinite; display: flex; align-items: center; justify-content: center; background: rgba(0,240,255,0.02); box-shadow: 0 0 15px rgba(0,240,255,0.1);">
+            <div style="width: 90px; height: 90px; border-radius: 50%; border: 1.5px solid var(--neon-purple); animation: pulse 2.5s ease-in-out infinite; background: rgba(160,0,255,0.04); box-shadow: inset 0 0 10px rgba(160,0,255,0.2);"></div>
+          </div>
+        </div>
+      `;
+    }
+    animateOrbFallback();
+  }
+}
+
+function morphThreeParticles() {
+  if (!points) return;
+  const positionAttr = points.geometry.attributes.position;
+  const colorAttr = points.geometry.attributes.color;
+  const array = positionAttr.array;
+  const colArray = colorAttr.array;
+  
+  const stateColor = CORE_STATES[activeState] || CORE_STATES['idle'];
+  const targetColor = new THREE.Color(stateColor.r, stateColor.g, stateColor.b);
+  
+  for (let i = 0; i < particleCount * 3; i += 3) {
+    let x = array[i];
+    let y = array[i+1];
+    let z = array[i+2];
+    
+    colArray[i] += (targetColor.r - colArray[i]) * 0.05;
+    colArray[i+1] += (targetColor.g - colArray[i+1]) * 0.05;
+    colArray[i+2] += (targetColor.b - colArray[i+2]) * 0.05;
+    
+    let scale = 1.0;
+    if (activeState === 'idle') {
+      scale = 1.0 + 0.05 * Math.sin(visualTime * 1.5 + (x + y) * 0.2);
+      array[i] += (x * scale - x) * 0.05;
+      array[i+1] += (y * scale - y) * 0.05;
+    } else if (activeState === 'listening') {
+      array[i+2] += (0 - z) * 0.1;
+      scale = 1.0 + 0.08 * Math.sin(visualTime * 3.0 + Math.sqrt(x*x + y*y) * 0.5);
+      array[i] += (x * scale - x) * 0.1;
+      array[i+1] += (y * scale - y) * 0.1;
+    } else if (activeState === 'processing') {
+      const angle = Math.atan2(y, x);
+      const r = Math.sqrt(x*x + y*y);
+      const twist = Math.sin(visualTime * 4.0 + z * 0.5) * 0.3;
+      array[i] = r * Math.cos(angle + twist);
+      array[i+1] = r * Math.sin(angle + twist);
+    } else if (activeState === 'speaking') {
+      const pulse = 1.0 + 0.1 * Math.sin(visualTime * 6.0 + Math.sqrt(x*x + y*y + z*z) * 0.8);
+      array[i] += (x * pulse - x) * 0.1;
+      array[i+1] += (y * pulse - y) * 0.1;
+      array[i+2] += (z * pulse - z) * 0.1;
+    } else if (activeState === 'alert') {
+      array[i] += (Math.random() - 0.5) * 0.3;
+      array[i+1] += (Math.random() - 0.5) * 0.3;
+      array[i+2] += (Math.random() - 0.5) * 0.3;
+      const dist = Math.sqrt(array[i]**2 + array[i+1]**2 + array[i+2]**2);
+      if (dist > 5.0) {
+        array[i] *= 0.9;
+        array[i+1] *= 0.9;
+        array[i+2] *= 0.9;
+      }
+    }
+  }
+  
+  positionAttr.needsUpdate = true;
+  colorAttr.needsUpdate = true;
+}
+
+function drawWaveform() {
+  if (!wCanvas) {
+    wCanvas = document.getElementById('waveform-canvas');
+    if (!wCanvas) return;
+    wCtx = wCanvas.getContext('2d');
+  }
+  const wW = wCanvas.width, wH = wCanvas.height;
+  wCtx.clearRect(0, 0, wW, wH);
+  let amplitude = 0;
+  if (activeState === 'speaking')        amplitude = 8 + 12 * Math.abs(Math.sin(visualTime * 4.3));
+  else if (activeState === 'listening')  amplitude = 4 + 6 * Math.abs(Math.sin(visualTime * 3.1));
+  else if (activeState === 'processing') amplitude = 3 + 4 * Math.abs(Math.sin(visualTime * 6));
+  else if (activeState === 'alert')      amplitude = 12 * Math.abs(Math.sin(visualTime * 7));
+  else amplitude = 1 + Math.random();
+  
+  waveData.push(amplitude * (Math.random() > 0.5 ? 1 : -1));
+  if (waveData.length > WAVE_LEN) waveData.shift();
+  
+  const s = CORE_STATES[activeState] || CORE_STATES['idle'];
+  const grad = wCtx.createLinearGradient(0, 0, wW, 0);
+  grad.addColorStop(0, `rgba(${Math.round(s.r*255)},${Math.round(s.g*255)},${Math.round(s.b*255)},0.02)`);
+  grad.addColorStop(0.5, `rgba(${Math.round(s.r*255)},${Math.round(s.g*255)},${Math.round(s.b*255)},0.7)`);
+  grad.addColorStop(1, `rgba(${Math.round(s.r*255)},${Math.round(s.g*255)},${Math.round(s.b*255)},0.02)`);
+  
+  wCtx.strokeStyle = grad;
+  wCtx.lineWidth = 1.2;
+  wCtx.beginPath();
+  const stepX = wW / WAVE_LEN;
+  for (let i = 0; i < waveData.length; i++) {
+    const x = i * stepX;
+    const y = wH / 2 + waveData[i];
+    i === 0 ? wCtx.moveTo(x, y) : wCtx.lineTo(x, y);
+  }
+  wCtx.stroke();
+}
+
+function animateOrb() {
+  visualTime += 0.015;
+  
+  if (points) {
+    if (activeState === 'idle') {
+      points.rotation.y += 0.002;
+      points.rotation.x += 0.001;
+    } else if (activeState === 'listening') {
+      points.rotation.y += 0.02;
+    } else if (activeState === 'processing') {
+      points.rotation.y -= 0.035;
+      points.rotation.z += 0.01;
+    } else if (activeState === 'alert') {
+      points.rotation.y += 0.05;
+      points.rotation.x += 0.02;
+    } else if (activeState === 'speaking') {
+      points.rotation.y += 0.008;
+      points.rotation.x += 0.005;
+    }
+    
+    morphThreeParticles();
+    renderer.render(scene, camera);
+  }
+  
+  drawWaveform();
+  requestAnimationFrame(animateOrb);
+}
+
+function animateOrbFallback() {
+  visualTime += 0.015;
+  drawWaveform();
+  requestAnimationFrame(animateOrbFallback);
+}
+
+function unlockUpgrade(key, cost) {
+  fetch('/api/update_lab_stats', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ credits: -cost, unlock: key })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if(data.success) {
+      addLog('SYS: Hardware unlocked: NVIDIA upgrade tier (' + key + ').');
+      loadStatus();
+    }
+  });
+}
+
+function calculateSavings() {
+  const savings = parseFloat(document.getElementById('real-savings').value) || 0;
+  const target = parseFloat(document.getElementById('savings-target').value) || 200;
+  
+  let percent = Math.min(Math.round((savings / target) * 100), 100);
+  let remains = Math.max(target - savings, 0);
+  
+  document.getElementById('savings-percent').textContent = percent + "%";
+  document.getElementById('savings-remains').textContent = "$" + remains.toFixed(2) + " remaining";
+}
+
+// ─────────────────────────────────────────────
+//  INITIALIZATION
+// ─────────────────────────────────────────────
+setInterval(updateClock, 1000);
+setInterval(loadStatus, 10000);
+setInterval(loadReminders, 10000);
+setInterval(loadGrowthCore, 10000);
+
+updateClock();
+loadStatus();
+loadNews();
+loadReminders();
+loadGrowthCore();
+
+// ─────────────────────────────────────────────
+//  ACADEMIC ASSIGNMENTS & DEADLINES PORTAL
+// ─────────────────────────────────────────────
+function loadAssignmentsList() {
+  fetch('/api/assignments')
+    .then(res => res.json())
+    .then(data => {
+      const tbody = document.getElementById('assignments-tbody');
+      if (!tbody) return;
+      if (data.success && data.assignments && data.assignments.length > 0) {
+        tbody.innerHTML = '';
+        data.assignments.forEach(f => {
+          tbody.innerHTML += `
+            <tr style="border-bottom:0.5px solid #121829;">
+              <td style="padding:10px;color:var(--text-main);font-weight:600;"><span style="color:var(--neon-cyan);">📄</span> ${f.name}</td>
+              <td style="padding:10px;color:var(--text-muted);">${f.size}</td>
+              <td style="padding:10px;color:var(--text-muted);">${f.date}</td>
+              <td style="padding:10px;text-align:right;">
+                <a href="/api/assignments/${f.name}" download style="background:var(--neon-cyan);border:none;color:#000;font-family:Orbitron;font-size:9px;padding:4px 8px;cursor:pointer;text-decoration:none;font-weight:bold;">DOWNLOAD</a>
+              </td>
+            </tr>
+          `;
+        });
+      } else {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:16px;">No compiled PDF documents found in assignments folder Sir.</td></tr>';
+      }
+      
+      const quizSelector = document.getElementById('quiz-pdf-selector');
+      if (quizSelector) {
+        // Save currently selected value to restore it
+        const currentVal = quizSelector.value;
+        quizSelector.innerHTML = '<option value="">-- Select Compiled PDF --</option>';
+        if (data.success && data.assignments && data.assignments.length > 0) {
+          data.assignments.forEach(f => {
+            quizSelector.innerHTML += `<option value="${f.name}">${f.name}</option>`;
+          });
+        }
+        quizSelector.value = currentVal;
+      }
+    })
+    .catch(err => console.error("Error loading assignments:", err));
+}
+
+function loadDeadlinesList() {
+  fetch('/api/deadlines')
+    .then(res => res.json())
+    .then(data => {
+      const tbody = document.getElementById('deadlines-tbody');
+      if (!tbody) return;
+      if (data.deadlines && data.deadlines.length > 0) {
+        tbody.innerHTML = '';
+        data.deadlines.forEach(d => {
+          tbody.innerHTML += `
+            <tr style="border-bottom:0.5px solid #121829;">
+              <td style="padding:10px;color:var(--text-main);font-weight:600;">${d.text}</td>
+              <td style="padding:10px;color:var(--neon-emerald);font-family:Orbitron;font-size:10px;">${d.time}</td>
+              <td style="padding:10px;text-align:right;">
+                <button onclick="deleteDeadline(${d.id})" style="background:transparent;border:none;color:var(--neon-crimson);cursor:pointer;font-size:11px;font-family:Orbitron;">DELETE</button>
+              </td>
+            </tr>
+          `;
+        });
+      } else {
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:16px;">No academic deadlines registered Sir.</td></tr>';
+      }
+    })
+    .catch(err => console.error("Error loading deadlines:", err));
+}
+
+function addDeadlineManual() {
+  const textInput = document.getElementById('dl-text-input');
+  const timeInput = document.getElementById('dl-time-input');
+  if (!textInput || !timeInput) return;
+  const text = textInput.value.trim();
+  const time = timeInput.value.trim();
+  
+  if (!text || !time) {
+    alert("Please fill in both the task name and the due date Sir.");
+    return;
+  }
+  
+  fetch('/api/deadlines', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text: text, time: time })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      textInput.value = '';
+      timeInput.value = '';
+      loadDeadlinesList();
+    }
+  })
+  .catch(err => console.error("Error adding deadline:", err));
+}
+
+function deleteDeadline(id) {
+  fetch(`/api/deadlines/${id}`, { method: 'DELETE' })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        loadDeadlinesList();
+      }
+    })
+    .catch(err => console.error("Error deleting deadline:", err));
+}
+
+// ─────────────────────────────────────────────
+//  GROWTH CORE SELF-IMPROVEMENT LOGIC
+// ─────────────────────────────────────────────
+let growthActiveRating = 0;
+
+function setGrowthRating(rating) {
+  growthActiveRating = rating;
+  const stars = document.getElementById('growth-star-rating').children;
+  const descs = { 0: 'Unrated', 1: 'Difficult Day', 2: 'A Bit Behind', 3: 'Productive / Steady', 4: 'Greater Than Yesterday!', 5: 'Peak Optimization!' };
+  
+  for(let i = 0; i < 5; i++) {
+    if (i < rating) {
+      stars[i].textContent = '★';
+      stars[i].style.color = 'var(--neon-gold)';
+    } else {
+      stars[i].textContent = '☆';
+      stars[i].style.color = 'var(--text-muted)';
+    }
+  }
+  document.getElementById('growth-rating-desc').textContent = descs[rating];
+}
+
+function loadGrowthCore() {
+  fetch('/api/growth')
+    .then(res => res.json())
+    .then(data => {
+      if(!data.success) return;
+      
+      // Update Challenge
+      document.getElementById('growth-challenge-text').textContent = data.daily_challenge || 'Be greater than yesterday. Optimize your workflow and write clean python scripts!';
+      
+      // Render Goals List
+      const list = document.getElementById('growth-goals-list');
+      if (list) {
+        list.innerHTML = '';
+        if(!data.goals || data.goals.length === 0) {
+          list.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:16px;">No goals defined. Add one above or tell Rudra to add one!</div>';
+        } else {
+          let completedCount = 0;
+          data.goals.forEach(g => {
+            const isCompleted = data.today.completed_ids.includes(g.id);
+            if(isCompleted) completedCount++;
+            
+            list.innerHTML += `
+              <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(0,0,0,0.3);border:0.5px solid #142035;padding:8px 12px;border-radius:2px;margin-bottom:4px;">
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <input type="checkbox" style="accent-color:var(--neon-cyan);width:14px;height:14px;cursor:pointer;" ${isCompleted ? 'checked' : ''} onchange="toggleGrowthGoal(${g.id})"/>
+                  <span style="font-size:11px;color:${isCompleted ? 'var(--text-muted)' : 'var(--text-main)'};text-decoration:${isCompleted ? 'line-through' : 'none'};">${g.text}</span>
+                </div>
+                <button onclick="deleteGrowthGoal(${g.id})" style="background:transparent;border:none;color:var(--neon-crimson);font-family:Orbitron;font-size:9px;cursor:pointer;">✕</button>
+              </div>
+            `;
+          });
+          
+          // Progress update
+          let progressPct = Math.round((completedCount / data.goals.length) * 100) || 0;
+          document.getElementById('growth-progress-label').textContent = progressPct + "%";
+          document.getElementById('growth-progress-fill').style.width = progressPct + "%";
+        }
+      }
+      
+      // Reflection Log
+      if(document.activeElement !== document.getElementById('growth-reflection-input')) {
+        document.getElementById('growth-reflection-input').value = data.today.reflection || '';
+      }
+      setGrowthRating(data.today.rating || 0);
+      
+      // Streak Info
+      document.getElementById('growth-streak-val').textContent = data.streak + (data.streak === 1 ? " day" : " days");
+      
+      // Comparison with Yesterday
+      const vsYesterday = document.getElementById('growth-vs-yesterday');
+      if (vsYesterday) {
+        let todayCount = data.today.completed_ids.length;
+        let yesterdayCount = data.yesterday.completed_ids.length;
+        if (todayCount > yesterdayCount) {
+          vsYesterday.innerHTML = '<span style="color:var(--neon-emerald);">▲ GREATER</span><br><span style="font-size:9px;color:var(--text-muted);">+' + (todayCount - yesterdayCount) + ' goals</span>';
+        } else if (todayCount === yesterdayCount) {
+          vsYesterday.innerHTML = '<span style="color:var(--neon-gold);">▬ EQUAL</span><br><span style="font-size:9px;color:var(--text-muted);">' + todayCount + ' goals</span>';
+        } else {
+          vsYesterday.innerHTML = '<span style="color:var(--neon-crimson);">▼ BEHIND</span><br><span style="font-size:9px;color:var(--text-muted);">-' + (yesterdayCount - todayCount) + ' goals</span>';
+        }
+      }
+      
+      // History List
+      const histList = document.getElementById('growth-history-list');
+      if (histList) {
+        histList.innerHTML = '';
+        if(!data.history || data.history.length === 0) {
+          histList.innerHTML = '<div style="font-size:8px;color:var(--text-muted);text-align:center;">No history recorded yet.</div>';
+        } else {
+          data.history.forEach(h => {
+            let ratingStars = '★'.repeat(h.rating) + '☆'.repeat(5 - h.rating);
+            histList.innerHTML += `
+              <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(10,15,30,0.3);border-bottom:0.5px solid rgba(20,32,53,0.3);padding:4px 6px;font-size:9px;">
+                <span style="font-family:Orbitron;color:var(--text-muted);">${h.date}</span>
+                <span style="color:var(--neon-cyan);">${h.completed_count}/${h.total_count} goals</span>
+                <span style="color:var(--neon-gold);">${ratingStars}</span>
+              </div>
+            `;
+          });
+        }
+      }
+    })
+    .catch(err => console.error("Error loading growth stats:", err));
+}
+
+function addGrowthGoalManual() {
+  const input = document.getElementById('growth-goal-input');
+  const text = input.value.trim();
+  if(!text) return;
+  
+  fetch('/api/growth/goal', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ text })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if(data.goal) {
+      input.value = '';
+      loadGrowthCore();
+      addLog('SYS: Added growth goal manual: ' + text);
+    }
+  });
+}
+
+function toggleGrowthGoal(id) {
+  fetch('/api/growth/toggle', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ id })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if(data.success) {
+      loadGrowthCore();
+      if(data.awarded) {
+        addLog('SYS: Completed goal! Awarded +5 XP, +2 Credits.');
+      } else {
+        addLog('SYS: Toggled goal.');
+      }
+    }
+  });
+}
+
+function deleteGrowthGoal(id) {
+  if(confirm("Sir, remove this growth goal?")) {
+    fetch('/api/growth/goal/' + id, { method: 'DELETE' })
+      .then(res => res.json())
+      .then(data => {
+        if(data.success) {
+          loadGrowthCore();
+          addLog('SYS: Removed growth goal.');
+        }
+      });
+  }
+}
+
+function submitDailyReflection() {
+  const reflection = document.getElementById('growth-reflection-input').value.trim();
+  fetch('/api/growth/reflection', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ reflection, rating: growthActiveRating })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if(data.success) {
+      loadGrowthCore();
+      addLog('SYS: Daily reflection saved successfully! +10 XP.');
+    }
+  });
+}
+
+// ─────────────────────────────────────────────
+//  DYNAMIC QUIZZES, CODE REVIEW & ML SIMULATOR
+// ─────────────────────────────────────────────
+let activeQuizQuestions = [];
+
+function generateAIQuiz() {
+  const select = document.getElementById('quiz-pdf-selector');
+  const filename = select.value;
+  if (!filename) {
+    alert("Please select a compiled assignment PDF summary first Sir.");
+    return;
+  }
+  
+  const container = document.getElementById('dynamic-quiz-container');
+  container.style.display = 'block';
+  container.innerHTML = `
+    <div style="text-align:center;color:var(--text-muted);padding:16px;">
+      <div class="spinner" style="margin: 0 auto 10px auto;"></div>
+      <span>Aether parsing PDF & generating MCQ matrices...</span>
+    </div>
+  `;
+  
+  fetch('/api/quiz/generate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ filename: filename })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success && data.quiz) {
+      activeQuizQuestions = data.quiz;
+      renderActiveQuiz();
+    } else {
+      container.innerHTML = `<div style="color:var(--neon-crimson);padding:12px;">Failed to generate quiz: ${data.error || 'Unknown error'}</div>`;
+    }
+  })
+  .catch(err => {
+    container.innerHTML = `<div style="color:var(--neon-crimson);padding:12px;">Generation error: ${err.message}</div>`;
+  });
+}
+
+function renderActiveQuiz() {
+  const container = document.getElementById('dynamic-quiz-container');
+  container.innerHTML = `
+    <div style="font-size:11px;font-family:Orbitron;color:var(--neon-gold);margin-bottom:12px;border-bottom:0.5px solid #2a2010;padding-bottom:6px;text-transform:uppercase;">
+      Active Quiz Node
+    </div>
+  `;
+  
+  activeQuizQuestions.forEach((q, idx) => {
+    let optionsHtml = '';
+    q.options.forEach((opt, optIdx) => {
+      optionsHtml += `
+        <div style="margin:4px 0;display:flex;align-items:center;gap:8px;">
+          <input type="radio" name="q_${idx}" id="q_${idx}_o_${optIdx}" value="${optIdx}" style="accent-color:var(--neon-gold);cursor:pointer;"/>
+          <label for="q_${idx}_o_${optIdx}" style="font-size:11px;color:var(--text-main);cursor:pointer;">${opt}</label>
+        </div>
+      `;
+    });
+    
+    container.innerHTML += `
+      <div style="margin-bottom:16px;background:rgba(0,0,0,0.2);padding:10px;border:0.5px solid #142035;border-radius:2px;">
+        <div style="font-size:11px;color:var(--text-main);font-weight:600;margin-bottom:8px;">${idx + 1}. ${q.question}</div>
+        <div>${optionsHtml}</div>
+      </div>
+    `;
+  });
+  
+  container.innerHTML += `
+    <button onclick="submitAIQuiz()" class="colab-btn" style="width:100%;background:var(--neon-emerald);color:#000;font-weight:bold;margin-top:8px;">
+      SUBMIT ANSWERS FOR GRADING
+    </button>
+  `;
+}
+
+function submitAIQuiz() {
+  const answers = [];
+  for (let idx = 0; idx < activeQuizQuestions.length; idx++) {
+    const radios = document.getElementsByName(`q_${idx}`);
+    let selected = -1;
+    for (let r of radios) {
+      if (r.checked) {
+        selected = parseInt(r.value);
+        break;
+      }
+    }
+    if (selected === -1) {
+      alert(`Sir, please answer Question ${idx + 1} before submitting.`);
+      return;
+    }
+    answers.push(selected);
+  }
+  
+  const container = document.getElementById('dynamic-quiz-container');
+  container.innerHTML = `
+    <div style="text-align:center;color:var(--text-muted);padding:16px;">
+      <div class="spinner" style="margin: 0 auto 10px auto;"></div>
+      <span>Grading submissions... updating profile credits...</span>
+    </div>
+  `;
+  
+  fetch('/api/quiz/submit', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ answers: answers })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      let resultHtml = `
+        <div style="font-size:12px;font-family:Orbitron;margin-bottom:12px;font-weight:bold;color:${data.passed ? 'var(--neon-emerald)' : 'var(--neon-crimson)'};">
+          QUIZ RESULT: ${data.score}% - ${data.passed ? 'PASSED (STARK LEVEL UP)' : 'FAILED'}
+        </div>
+        <p style="font-size:10px;color:var(--text-muted);line-height:1.4;margin-bottom:12px;">
+          ${data.passed ? `Outstanding, Sir! You earned <b>+${data.xp_awarded} XP</b> and <b>+${data.credits_awarded} Credits</b>.` : 'Unfortunately, you did not pass the 80% threshold. Study the material and try again.'}
+        </p>
+      `;
+      
+      if (data.lab_stats) {
+        document.getElementById('prof-level').textContent = "Level " + data.lab_stats.level;
+        document.getElementById('prof-credits').textContent = data.lab_stats.credits + " C";
+        document.getElementById('prof-xp').textContent = data.lab_stats.xp + " XP";
+        
+        document.getElementById('hud-level').textContent = "Level " + data.lab_stats.level;
+        let xpProg = data.lab_stats.xp % 100;
+        document.getElementById('prof-xp-progress').style.width = xpProg + "%";
+        document.getElementById('prof-xp-label').textContent = xpProg + " / 100 XP to Level Up";
+        document.getElementById('hud-xp-progress').style.width = xpProg + "%";
+      }
+      
+      resultHtml += `
+        <button onclick="clearAIQuiz()" class="colab-btn" style="width:100%;background:rgba(255,255,255,0.05);color:var(--text-main);">
+          CLOSE QUIZ NODE
+        </button>
+      `;
+      container.innerHTML = resultHtml;
+      addLog(`SYS: Submitted quiz. Score: ${data.score}%. Passed: ${data.passed}`);
+    } else {
+      container.innerHTML = `<div style="color:var(--neon-crimson);padding:12px;">Grading error: ${data.error || 'Unknown error'}</div>`;
+    }
+  })
+  .catch(err => {
+    container.innerHTML = `<div style="color:var(--neon-crimson);padding:12px;">Submitting error: ${err.message}</div>`;
+  });
+}
+
+function clearAIQuiz() {
+  document.getElementById('dynamic-quiz-container').style.display = 'none';
+  document.getElementById('quiz-pdf-selector').value = '';
+}
+
+function reviewSandboxCode() {
+  const code = document.getElementById('sandbox-code').value;
+  const pane = document.getElementById('sandbox-review-pane');
+  if(!pane) return;
+  
+  pane.innerHTML = `
+    <div style="text-align:center;color:var(--text-muted);padding:30px;">
+      <div class="spinner" style="margin: 0 auto 10px auto;"></div>
+      <span>Analyzing script nodes... Consulting R.U.D.R.A. Core... [STARK OVERRIDE ON]</span>
+    </div>
+  `;
+  
+  fetch('/api/sandbox/review', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ code: code })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if(data.success) {
+      pane.innerHTML = `<div style="padding:8px;line-height:1.5;color:#e2d9d9;">${data.review}</div>`;
+      addLog('SYS: Sandbox code review complete.');
+    } else {
+      pane.innerHTML = `<div style="color:var(--neon-crimson);padding:12px;">Review error: ${data.error}</div>`;
+    }
+  })
+  .catch(err => {
+    pane.innerHTML = `<div style="color:var(--neon-crimson);padding:12px;">Connection error: ${err.message}</div>`;
+  });
+}
+
+function runMLSimulation() {
+  const epochs = document.getElementById('wb-ml-epochs').value;
+  const lr = document.getElementById('wb-ml-lr').value;
+  const opt = document.getElementById('wb-ml-opt').value;
+  const loss = document.getElementById('wb-ml-loss').value;
+  
+  const canvas = document.getElementById('ml-loss-canvas');
+  if(canvas) {
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#657896';
+    ctx.font = '9px Orbitron';
+    ctx.fillText("OPTIMIZING GRADIENT FLOW...", 30, 50);
+  }
+  
+  fetch('/api/ml/simulate', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ epochs, learning_rate: lr, optimizer: opt, loss_function: loss })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if(data.success) {
+      document.getElementById('ml-final-loss').textContent = data.train_loss[data.train_loss.length - 1].toFixed(5);
+      document.getElementById('ml-final-w').textContent = data.final_w;
+      document.getElementById('ml-final-b').textContent = data.final_b;
+      
+      drawLossCurve(data.epochs, data.train_loss, data.val_loss);
+      addLog(`SYS: Neural Core simulation complete. Loss: ${data.train_loss[data.train_loss.length - 1]}`);
+      
+      if (data.lab_stats) {
+        document.getElementById('prof-level').textContent = "Level " + data.lab_stats.level;
+        document.getElementById('prof-credits').textContent = data.lab_stats.credits + " C";
+        document.getElementById('prof-xp').textContent = data.lab_stats.xp + " XP";
+        document.getElementById('hud-level').textContent = "Level " + data.lab_stats.level;
+        let xpProg = data.lab_stats.xp % 100;
+        document.getElementById('prof-xp-progress').style.width = xpProg + "%";
+        document.getElementById('prof-xp-label').textContent = xpProg + " / 100 XP to Level Up";
+        document.getElementById('hud-xp-progress').style.width = xpProg + "%";
+      }
+    }
+  });
+}
+
+function drawLossCurve(epochs, trainLoss, valLoss) {
+  const canvas = document.getElementById('ml-loss-canvas');
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width;
+  const H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  
+  ctx.strokeStyle = '#0e1627';
+  ctx.lineWidth = 0.5;
+  for (let i = 1; i < 5; i++) {
+    ctx.beginPath();
+    ctx.moveTo(W * 0.2 * i, 0);
+    ctx.lineTo(W * 0.2 * i, H);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(0, H * 0.2 * i);
+    ctx.lineTo(W, H * 0.2 * i);
+    ctx.stroke();
+  }
+  
+  const maxLoss = Math.max(...trainLoss, ...valLoss, 0.1);
+  const minLoss = Math.min(...trainLoss, ...valLoss, 0.0);
+  const lossRange = maxLoss - minLoss || 0.1;
+  
+  ctx.strokeStyle = '#00f0ff';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  for(let i = 0; i < trainLoss.length; i++) {
+    const x = (i / (trainLoss.length - 1)) * (W - 14) + 7;
+    const y = H - ((trainLoss[i] - minLoss) / lossRange) * (H - 14) - 7;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  
+  ctx.strokeStyle = '#ffd700';
+  ctx.lineWidth = 1.0;
+  ctx.beginPath();
+  for(let i = 0; i < valLoss.length; i++) {
+    const x = (i / (valLoss.length - 1)) * (W - 14) + 7;
+    const y = H - ((valLoss[i] - minLoss) / lossRange) * (H - 14) - 7;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  
+  ctx.fillStyle = '#657896';
+  ctx.font = '7px monospace';
+  ctx.fillText("train", 8, 12);
+  ctx.strokeStyle = '#00f0ff';
+  ctx.beginPath(); ctx.moveTo(35, 10); ctx.lineTo(45, 10); ctx.stroke();
+  
+  ctx.fillStyle = '#657896';
+  ctx.fillText("val", 55, 12);
+  ctx.strokeStyle = '#ffd700';
+  ctx.beginPath(); ctx.moveTo(75, 10); ctx.lineTo(85, 10); ctx.stroke();
+}
+
+// ─────────────────────────────────────────────
+//  NEURAL FORGE FRONTEND CONTROLLERS
+// ─────────────────────────────────────────────
+let selectedMLDataset = "";
+let latestTrainedMLFeatures = [];
+
+function toggleCustomGPTCorpus() {
+  const val = document.getElementById('gpt-corpus-type').value;
+  const wrap = document.getElementById('gpt-custom-text-wrap');
+  wrap.style.display = (val === 'custom') ? 'block' : 'none';
+}
+
+function startGPTTraining() {
+  const corpus_type = document.getElementById('gpt-corpus-type').value;
+  const epochs = document.getElementById('gpt-epochs').value;
+  const hidden_size = document.getElementById('gpt-hidden-size').value;
+  const seq_len = document.getElementById('gpt-seq-len').value;
+  const lr = document.getElementById('gpt-lr').value;
+  const custom_text = document.getElementById('gpt-custom-text').value;
+  
+  const btnTrain = document.getElementById('btn-train-gpt');
+  const btnStop = document.getElementById('btn-stop-gpt');
+  const consoleDiv = document.getElementById('gpt-console');
+  
+  consoleDiv.innerHTML = '<div class="terminal-line sys">Connecting to neural core training thread...</div>';
+  
+  btnTrain.style.display = 'none';
+  btnStop.style.display = 'block';
+  document.getElementById('gpt-generation-wrap').style.display = 'none';
+
+  fetch('/api/forge/gpt/train', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      corpus_type: corpus_type,
+      epochs: epochs,
+      hidden_size: hidden_size,
+      seq_length: seq_len,
+      learning_rate: lr,
+      custom_text: custom_text
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (!data.success) {
+      consoleDiv.innerHTML += `<div class="terminal-line error">Training failed: ${data.error || 'unknown error'}</div>`;
+      btnTrain.style.display = 'block';
+      btnStop.style.display = 'none';
+    }
+  });
+}
+
+function stopGPTTraining() {
+  fetch('/api/forge/gpt/stop', { method: 'POST' })
+    .then(() => {
+      document.getElementById('btn-train-gpt').style.display = 'block';
+      document.getElementById('btn-stop-gpt').style.display = 'none';
+      document.getElementById('gpt-console').innerHTML += '<div class="terminal-line sys">Abort signal sent. Stopping...</div>';
+    });
+}
+
+if (socket) {
+  socket.on('gpt_train_progress', (data) => {
+    const consoleDiv = document.getElementById('gpt-console');
+    const line = document.createElement('div');
+    
+    if (data.status === 'training') {
+      line.className = 'terminal-line';
+      line.innerHTML = `<span style="color:#00ffaa;">[EPOCH ${data.epoch}]</span> Loss: ${data.loss} <br/> <span style="color:#ffd700; font-style:italic;">"${data.sample}"</span>`;
+      consoleDiv.appendChild(line);
+      consoleDiv.scrollTop = consoleDiv.scrollHeight;
+    } else {
+      // Completed or Aborted
+      line.className = 'terminal-line sys';
+      line.innerHTML = `[TRAINING STATUS: ${data.status.toUpperCase()}] Final Loss: ${data.loss}`;
+      consoleDiv.appendChild(line);
+      consoleDiv.scrollTop = consoleDiv.scrollHeight;
+      
+      document.getElementById('btn-train-gpt').style.display = 'block';
+      document.getElementById('btn-stop-gpt').style.display = 'none';
+      
+      if (data.status === 'completed') {
+        document.getElementById('gpt-generation-wrap').style.display = 'block';
+        document.getElementById('gpt-gen-output').textContent = data.sample;
+      }
+    }
+  });
+}
+
+function generateGPTText() {
+  const seed = document.getElementById('gpt-seed').value;
+  const temp = document.getElementById('gpt-temp').value;
+  const outputDiv = document.getElementById('gpt-gen-output');
+  outputDiv.textContent = "Synthesizing text completion...";
+  
+  fetch('/api/forge/gpt/generate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ seed: seed, temperature: temp, count: 200 })
+  })
+  .then(res => res.json())
+  .then(data => {
+    outputDiv.textContent = data.text;
+  });
+}
+
+// Tabular ML studio controllers
+function uploadCSVDataset() {
+  const fileInput = document.getElementById('ml-csv-file');
+  if (fileInput.files.length === 0) {
+    alert("Please select a CSV file first!");
+    return;
+  }
+  
+  const formData = new FormData();
+  formData.append('file', fileInput.files[0]);
+  
+  document.getElementById('ml-console').innerHTML = '<div class="terminal-line sys">Uploading CSV file...</div>';
+  
+  fetch('/api/forge/ml/upload', {
+    method: 'POST',
+    body: formData
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      document.getElementById('ml-console').innerHTML = `<div class="terminal-line sys">File uploaded successfully: ${data.filename} (${data.columns.length} columns)</div>`;
+      loadTabularDatasetsList(() => {
+        // Select uploaded dataset
+        const select = document.getElementById('ml-dataset-select');
+        select.value = data.filename;
+        onDatasetSelected();
+      });
+    } else {
+      document.getElementById('ml-console').innerHTML = `<div class="terminal-line error">Upload failed: ${data.error}</div>`;
+    }
+  });
+}
+
+function loadTabularDatasetsList(callback) {
+  fetch('/api/forge/ml/datasets')
+    .then(res => res.json())
+    .then(data => {
+      const select = document.getElementById('ml-dataset-select');
+      select.innerHTML = '<option value="">-- Select Dataset --</option>';
+      data.datasets.forEach(d => {
+        const opt = document.createElement('option');
+        opt.value = d.name;
+        opt.textContent = `${d.name} (${d.rows} rows)`;
+        opt.dataset.columns = JSON.stringify(d.columns);
+        select.appendChild(opt);
+      });
+      if (callback) callback();
+    });
+}
+
+function onDatasetSelected() {
+  const select = document.getElementById('ml-dataset-select');
+  const targetSelect = document.getElementById('ml-target-col');
+  const selectedOption = select.options[select.selectedIndex];
+  
+  targetSelect.innerHTML = '<option value="">-- Select Target --</option>';
+  if (!selectedOption || !selectedOption.value) return;
+  
+  selectedMLDataset = selectedOption.value;
+  const columns = JSON.parse(selectedOption.dataset.columns);
+  
+  columns.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c;
+    opt.textContent = c;
+    targetSelect.appendChild(opt);
+  });
+  
+  document.getElementById('ml-console').innerHTML = `<div class="terminal-line sys">Selected dataset ${selectedMLDataset}. Please select target column (y) to predict.</div>`;
+}
+
+function trainTabularModel() {
+  const target = document.getElementById('ml-target-col').value;
+  const model_type = document.getElementById('ml-model-type').value;
+  
+  if (!selectedMLDataset) {
+    alert("Please select a dataset first!");
+    return;
+  }
+  if (!target) {
+    alert("Please select target column!");
+    return;
+  }
+  
+  const consoleDiv = document.getElementById('ml-console');
+  consoleDiv.innerHTML = `<div class="terminal-line sys">Training ${model_type.toUpperCase()} model on ${selectedMLDataset}...</div>`;
+  
+  fetch('/api/forge/ml/train', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      filename: selectedMLDataset,
+      target: target,
+      model_type: model_type
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      consoleDiv.innerHTML = `<div class="terminal-line sys" style="color:#00ffaa;">Training completed! ${data.model_name} trained in ${data.train_time}.</div>`;
+      consoleDiv.innerHTML += `<div class="terminal-line sys">${data.details}</div>`;
+      
+      // Update XP
+      if (data.lab_stats) {
+        document.getElementById('hud-level').textContent = 'Level ' + data.lab_stats.level;
+        document.getElementById('hud-xp-progress').style.width = (data.lab_stats.xp % 100) + '%';
+        document.getElementById('hud-xp-label').textContent = `${data.lab_stats.xp} / ${(Math.floor(data.lab_stats.xp / 100) + 1) * 100} XP`;
+      }
+      
+      // Show plots and prediction tester
+      const evalWrap = document.getElementById('ml-eval-wrap');
+      evalWrap.style.opacity = '1.0';
+      evalWrap.style.pointerEvents = 'auto';
+      
+      // Reload image plot (with cache buster)
+      const plot = document.getElementById('ml-eval-plot');
+      plot.src = '/static/img/ml_plots/latest_run.png?cb=' + Date.now();
+      plot.style.display = 'block';
+      document.getElementById('ml-plot-placeholder').style.display = 'none';
+      
+      latestTrainedMLFeatures = data.features;
+      showPredictFields(data.features);
+    } else {
+      consoleDiv.innerHTML = `<div class="terminal-line error">Training failed: ${data.error}</div>`;
+    }
+  });
+}
+
+function showPredictFields(features) {
+  const container = document.getElementById('ml-predict-fields');
+  container.innerHTML = "";
+  
+  features.forEach(f => {
+    const div = document.createElement('div');
+    div.style.display = 'flex';
+    div.style.justifyContent = 'space-between';
+    div.style.alignItems = 'center';
+    div.style.gap = '6px';
+    div.style.fontSize = '10px';
+    
+    const label = document.createElement('span');
+    label.textContent = f;
+    label.style.color = 'var(--text-muted)';
+    
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'predict-input';
+    input.dataset.feature = f;
+    input.style.width = '60px';
+    input.style.background = 'rgba(0,0,0,0.8)';
+    input.style.border = '0.5px solid #142035';
+    input.style.color = '#fff';
+    input.style.fontFamily = 'JetBrains Mono';
+    input.style.fontSize = '9px';
+    input.style.padding = '2px 4px';
+    input.value = "0.0";
+    
+    div.appendChild(label);
+    div.appendChild(input);
+    container.appendChild(div);
+  });
+  
+  document.getElementById('btn-ml-predict').style.display = 'block';
+}
+
+function predictTabularQuery() {
+  const inputs = {};
+  const inputElements = document.querySelectorAll('.predict-input');
+  inputElements.forEach(el => {
+    inputs[el.dataset.feature] = el.value;
+  });
+  
+  document.getElementById('ml-predict-result').textContent = "Predicting...";
+  
+  fetch('/api/forge/ml/predict', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ inputs: inputs })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      document.getElementById('ml-predict-result').innerHTML = `PREDICTED ${data.target.toUpperCase()}: <span style="color:#00ffaa; font-weight:bold;">${data.prediction}</span>`;
+    } else {
+      document.getElementById('ml-predict-result').textContent = "Error: " + data.error;
+    }
+  });
+}
+
+// Clock/Status loads & Three.js boot
+document.addEventListener('DOMContentLoaded', () => {
+  const epInput = document.getElementById('wb-ml-epochs');
+  const lrInput = document.getElementById('wb-ml-lr');
+  if(epInput) {
+    epInput.addEventListener('input', e => {
+      document.getElementById('wb-ml-epochs-val').textContent = e.target.value;
+    });
+  }
+  if(lrInput) {
+    lrInput.addEventListener('input', e => {
+      document.getElementById('wb-ml-lr-val').textContent = e.target.value;
+    });
+  }
+  
+  // Initialize Three.js visualizer on startup
+  initThreeOrb();
+});
+
+// ─────────────────────────────────────────────
+//  WORKBENCH MANAGER & CODING SANDBOX BRIDGE
+// ─────────────────────────────────────────────
+window.WorkbenchManager = {
+  open: function(workbench, payload) {
+    const tabId = (workbench === 'coding' || workbench === 'sandbox') ? 'sandbox-tab' : 'hud-tab';
+    const btn = document.querySelector(`button[onclick*="${tabId}"]`);
+    if (typeof switchTab === 'function') {
+      switchTab(tabId, btn || document.createElement('button'));
+    }
+    if (payload && (payload.code || typeof payload === 'string')) {
+      this.loadCode(payload.code || payload);
+    }
+  },
+
+  loadCode: function(code) {
+    if (typeof code !== 'string' || !code.trim()) return;
+    const editor = document.getElementById('sandbox-code');
+    if (editor) {
+      editor.value = code;
+      if (typeof updateLineNumbers === 'function') {
+        updateLineNumbers();
+      }
+      editor.dispatchEvent(new Event('input', { bubbles: true }));
+      editor.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  },
+
+  showExecutionResult: function(stdout, stderr, exitCode, code) {
+    if (code) {
+      this.loadCode(code);
+    }
+    const term = document.getElementById('sandbox-terminal');
+    if (!term) return;
+
+    if (exitCode === 0 && !stderr) {
+      const outLine = document.createElement('div');
+      outLine.className = 'terminal-line';
+      outLine.textContent = stdout || '[Executed successfully with exit code 0]';
+      term.appendChild(outLine);
+    } else {
+      if (stdout) {
+        const outLine = document.createElement('div');
+        outLine.className = 'terminal-line';
+        outLine.textContent = stdout;
+        term.appendChild(outLine);
+      }
+      const errLine = document.createElement('div');
+      errLine.className = 'terminal-line error';
+      errLine.textContent = stderr || (`[Process exited with code ${exitCode}]`);
+      term.appendChild(errLine);
+    }
+    term.scrollTop = term.scrollHeight;
+  },
+
+  handleEvent: function(evt) {
+    if (!evt || !evt.type) return;
+    const code = (evt.payload && evt.payload.code) ? evt.payload.code : (evt.code || '');
+    if (evt.type === 'WORKBENCH_OPEN') {
+      this.open(evt.workbench || 'coding', evt.payload);
+      if (code) this.loadCode(code);
+    } else if (evt.type === 'CODE_LOAD') {
+      this.open('coding');
+      this.loadCode(code);
+    } else if (evt.type === 'CODE_EXECUTION_RESULT') {
+      this.open('coding');
+      if (code) this.loadCode(code);
+      this.showExecutionResult(evt.stdout || '', evt.stderr || '', evt.exit_code || 0, code);
+    }
+  }
+};
+
+// Wire Socket.IO listener for workbench events
+if (typeof socket !== 'undefined') {
+  socket.on('workbench_event', function(data) {
+    if (window.WorkbenchManager) {
+      window.WorkbenchManager.handleEvent(data);
+    }
+  });
+}
+
+// Fast polling backup (150ms)
+let _lastWbEventId = 0;
+setInterval(function() {
+  fetch('/api/workbench/event')
+    .then(r => r.json())
+    .then(evt => {
+      if (evt && evt.id && evt.id > _lastWbEventId) {
+        _lastWbEventId = evt.id;
+        if (window.WorkbenchManager) {
+          window.WorkbenchManager.handleEvent(evt);
+        }
+      }
+    })
+    .catch(() => {});
+}, 150);
+
+</script>
+</body>
+</html>

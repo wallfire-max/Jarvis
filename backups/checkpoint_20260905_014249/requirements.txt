@@ -1,0 +1,12 @@
+SpeechRecognition
+pyttsx3
+pyaudio
+psutil
+requests
+flask
+flask-socketio
+pywebview
+pyautogui
+screen-brightness-control
+ollama
+pygetwindow

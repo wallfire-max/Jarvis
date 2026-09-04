@@ -1,4 +1,4 @@
-\# J.A.R.V.I.S — Personal AI Assistant
+\# R.U.D.R.A. — Personal AI Assistant
 
 
 
@@ -6,7 +6,7 @@ A fully voice-controlled AI assistant built in Python, running a local LLM (LLaM
 
 
 
-Inspired by Iron Man's Jarvis — sarcastic, dry wit, always calls you Sir.
+Inspired by Iron Man's Rudra — sarcastic, dry wit, always calls you Sir.
 
 
 
@@ -18,13 +18,13 @@ Inspired by Iron Man's Jarvis — sarcastic, dry wit, always calls you Sir.
 
 
 
-> "Jarvis, what's the weather?"  
+> "Rudra, what's the weather?"  
 
 > \*"Current weather in Chennai is 34°C and sunny Sir. Dress accordingly. Or don't. Your choice."\*
 
 
 
-> "Jarvis, remember I have an exam tomorrow"  
+> "Rudra, remember I have an exam tomorrow"  
 
 > \*"Noted Sir. Filed away in my impeccable memory."\*
 
@@ -60,7 +60,7 @@ Inspired by Iron Man's Jarvis — sarcastic, dry wit, always calls you Sir.
 
 \### 🔜 Upcoming
 
-\- Level 6 — Proactive Jarvis (reminders, suggestions without being asked)
+\- Level 6 — Proactive Rudra (reminders, suggestions without being asked)
 
 \- Level 7 — Phone + laptop as one (WhatsApp call handling, cross-device control)
 
@@ -110,17 +110,17 @@ Inspired by Iron Man's Jarvis — sarcastic, dry wit, always calls you Sir.
 
 ```
 
-Jarvis/
+Rudra/
 
-├── jarvis.py           # Main assistant — all logic lives here
+├── rudra.py           # Main assistant — all logic lives here
 
-├── jarvis\_face.html    # Animated UI (canvas-based, Iron Man HUD style)
+├── rudra\_face.html    # Animated UI (canvas-based, Iron Man HUD style)
 
 ├── app.py              # Flask web dashboard
 
 ├── memory.json         # Persistent memory (auto-created on first run)
 
-├── start\_jarvis.bat    # Windows launcher
+├── start\_rudra.bat    # Windows launcher
 
 ├── requirements.txt    # Python dependencies
 
@@ -168,9 +168,9 @@ ollama pull llama3.2
 
 ```bash
 
-git clone https://github.com/YOUR\_USERNAME/jarvis.git
+git clone https://github.com/YOUR\_USERNAME/rudra.git
 
-cd jarvis
+cd rudra
 
 ```
 
@@ -186,25 +186,25 @@ pip install -r requirements.txt
 
 
 
-\### 4. Update the memory file path in jarvis.py
+\### 4. Update the memory file path in rudra.py
 
-Open `jarvis.py` and change line 21 to your actual path:
+Open `rudra.py` and change line 21 to your actual path:
 
 ```python
 
-MEMORY\_FILE = "C:\\\\Users\\\\YOUR\_NAME\\\\path\\\\to\\\\Jarvis\\\\memory.json"
+MEMORY\_FILE = "C:\\\\Users\\\\YOUR\_NAME\\\\path\\\\to\\\\Rudra\\\\memory.json"
 
 ```
 
 
 
-\### 5. Run Jarvis
+\### 5. Run Rudra
 
 ```bash
 
-python jarvis.py
+python rudra.py
 
-\# or double-click start\_jarvis.bat on Windows
+\# or double-click start\_rudra.bat on Windows
 
 ```
 
@@ -222,35 +222,35 @@ python jarvis.py
 
 |-----|-------------|
 
-| `Jarvis` | Wake word — Jarvis listens for your command |
+| `Rudra` | Wake word — Rudra listens for your command |
 
-| `Jarvis, remember \[anything]` | Stores a fact in memory |
+| `Rudra, remember \[anything]` | Stores a fact in memory |
 
-| `Jarvis, what do you remember` | Recalls stored facts |
+| `Rudra, what do you remember` | Recalls stored facts |
 
-| `Jarvis, what are my preferences` | Lists learned preferences |
+| `Rudra, what are my preferences` | Lists learned preferences |
 
-| `Jarvis, what are my habits` | Shows your usage patterns |
+| `Rudra, what are my habits` | Shows your usage patterns |
 
-| `Jarvis, briefing` | Full morning/evening briefing |
+| `Rudra, briefing` | Full morning/evening briefing |
 
-| `Jarvis, open YouTube` | Opens YouTube, asks what to search |
+| `Rudra, open YouTube` | Opens YouTube, asks what to search |
 
-| `Jarvis, volume up/down` | Adjusts system volume |
+| `Rudra, volume up/down` | Adjusts system volume |
 
-| `Jarvis, brightness up/down` | Adjusts screen brightness |
+| `Rudra, brightness up/down` | Adjusts screen brightness |
 
-| `Jarvis, take screenshot` | Screenshots to desktop |
+| `Rudra, take screenshot` | Screenshots to desktop |
 
-| `Jarvis, WiFi on/off` | Toggles WiFi |
+| `Rudra, WiFi on/off` | Toggles WiFi |
 
-| `Jarvis, open \[app name]` | Launches any installed app |
+| `Rudra, open \[app name]` | Launches any installed app |
 
-| `Jarvis, close \[app name]` | Kills any running process |
+| `Rudra, close \[app name]` | Kills any running process |
 
-| `Jarvis, lock` | Locks the screen |
+| `Rudra, lock` | Locks the screen |
 
-| `Jarvis, go home` | Shuts down Jarvis |
+| `Rudra, go home` | Shuts down Rudra |
 
 | Anything else | Goes to LLaMA 3.2 for an answer |
 
@@ -264,11 +264,11 @@ python jarvis.py
 
 
 
-Jarvis remembers across sessions using a 5-layer memory stored in `memory.json`:
+Rudra remembers across sessions using a 5-layer memory stored in `memory.json`:
 
 
 
-\- \*\*Facts\*\* — things you manually tell it (`Jarvis, remember I prefer dark mode`)
+\- \*\*Facts\*\* — things you manually tell it (`Rudra, remember I prefer dark mode`)
 
 \- \*\*Preferences\*\* — auto-learned from phrases like `I like lofi music`
 
@@ -276,7 +276,7 @@ Jarvis remembers across sessions using a 5-layer memory stored in `memory.json`:
 
 \- \*\*Conversations\*\* — stores last 20 exchanges, fed into the AI prompt for context
 
-\- \*\*Sessions\*\* — counts how many times Jarvis has been started
+\- \*\*Sessions\*\* — counts how many times Rudra has been started
 
 
 
@@ -334,7 +334,7 @@ pygetwindow
 
 \- Microphone must be set as default input device
 
-\- Ollama must be running in background before starting Jarvis
+\- Ollama must be running in background before starting Rudra
 
 \- `memory.json` path is hardcoded — update it to your system path
 

@@ -1,0 +1,10 @@
+{
+  "checkpoint_name": "RUDRA_STATE_20260905_014249",
+  "created_at": "2026-09-05 01:42:49",
+  "base_directory": "C:\\Users\\Jaswa\\OneDrive\\Desktop\\rudra",
+  "backup_directory": "C:\\Users\\Jaswa\\OneDrive\\Desktop\\rudra\\backups\\checkpoint_20260905_014249",
+  "file_count": 32,
+  "total_size_bytes": 492536,
+  "git_branch": "main",
+  "status": "VERIFIED_WORKING_R1_R8"
+}

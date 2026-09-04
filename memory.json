@@ -1,16 +1,208 @@
 {
   "name": "Jaswanth",
-  "location": "Chennai",
-  "preferences": {},
-  "facts": [],
-  "conversations": [
+  "location": "auto",
+  "preferences": {
+    "language": "Python",
+    "ide": "vs code"
+  },
+  "facts": [
     {
-      "time": "2026-04-15 23:13",
-      "user": "hey jarvis",
-      "jarvis": "Sir, it's about time you acknowledged my presence. I trust your day has been tolerable so far? Shall we proceed with the"
+      "fact": "User is studying Artificial Intelligence",
+      "time": "2026-09-04 21:55"
     }
   ],
-  "session_count": 2,
-  "last_seen": "2026-04-19 08:20",
-  "habits": []
+  "habits": [],
+  "conversations": [
+    {
+      "time": "2026-09-04 22:10",
+      "user": "what is favourite language",
+      "rudra": "My creator Jaswanth's favorite programming language is Python, and I'm designed to work seamlessly with it in VS Code, h"
+    },
+    {
+      "time": "2026-09-04 22:10",
+      "user": "i like to play football",
+      "rudra": "That's great! You might find interesting ways to apply the principles of game analysis and strategy to improve your foot"
+    },
+    {
+      "time": "2026-09-04 22:10",
+      "user": "who do i like",
+      "rudra": "You like working with Python programming language, and you also use Visual Studio Code (VS Code) as your preferred Integ"
+    },
+    {
+      "time": "2026-09-04 22:30",
+      "user": "are kya dikkat rajasekhar",
+      "rudra": "Raja Sekhar is a term that can refer to different individuals, but in the context of Artificial Intelligence, Raja Sekha"
+    },
+    {
+      "time": "2026-09-04 22:31",
+      "user": "dcn",
+      "rudra": "It seems like you're not feeling too chatty today. How can I assist you, despite the brief greeting?"
+    },
+    {
+      "time": "2026-09-04 22:32",
+      "user": "night mein kitna",
+      "rudra": "Main Rohan se bura hoon, apko koi problem hai ya kuchh seekhna hai?"
+    },
+    {
+      "time": "2026-09-04 22:33",
+      "user": "i am off to",
+      "rudra": "catch up on some AI-related projects, I'll be here to help with any Python-related questions or coding problems you'd li"
+    },
+    {
+      "time": "2026-09-04 23:26",
+      "user": "is that food in check whatsapp",
+      "rudra": "It seems like you're referring to a message from Jaswanth's WhatsApp chat. I'm not sure what the message says, but I can"
+    },
+    {
+      "time": "2026-09-04 23:29",
+      "user": "is this really safe to host in instagram on youtube",
+      "rudra": "I'm not aware of any specific information about your project, but generally, hosting machine learning models, like yours"
+    },
+    {
+      "time": "2026-09-04 23:32",
+      "user": "can i post this type of meaning in instagram",
+      "rudra": "You can share a brief summary of your AI concept in Instagram, but consider breaking it up into smaller, bite-sized chun"
+    },
+    {
+      "time": "2026-09-04 23:33",
+      "user": "alright so it's safe only know",
+      "rudra": "You're referring to the concept of \"safe\" in AI, which means designing systems that can operate without causing harm or "
+    },
+    {
+      "time": "2026-09-04 23:33",
+      "user": "from the instagram",
+      "rudra": "I couldn't find any information on \"from the instagram\". Instagram is a social media platform, not a source of facts. Ca"
+    },
+    {
+      "time": "2026-09-05 00:49",
+      "user": "botan",
+      "rudra": "I couldn't understand that. Could you please repeat or rephrase your question? We were discussing Artificial Intelligenc"
+    },
+    {
+      "time": "2026-09-05 01:00",
+      "user": "hello",
+      "rudra": "Hello! I'm Rudra, Jaswanth's AI assistant. How can I assist you in your AI studies today?"
+    },
+    {
+      "time": "2026-09-05 01:15",
+      "user": "You are given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.  You may assume that each input would have exactly one solution, and you may not use the same element twice.  You can return the answer in any order.     Example 1:  Input: nums = [2,7,11,15], target = 9 Output: [0,1] Explanation: Because nums[0] + nums[1] == 9, we return [0, 1]. Example 2:  Input: nums = [3,2,4], target = 6 Output: [1,2] Example 3:  Input: nums = [3,3], target = 6 Output: [0,1]",
+      "rudra": "This problem can be solved using a dictionary to store the indices of the numbers we have seen so far and their compleme"
+    },
+    {
+      "time": "2026-09-05 01:16",
+      "user": "You are given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.  You may assume that each input would have exactly one solution, and you may not use the same element twice.  You can return the answer in any order.     Example 1:  Input: nums = [2,7,11,15], target = 9 Output: [0,1] Explanation: Because nums[0] + nums[1] == 9, we return [0, 1]. Example 2:  Input: nums = [3,2,4], target = 6 Output: [1,2] Example 3:  Input: nums = [3,3], target = 6 Output: [0,1]",
+      "rudra": "To solve this problem, we can use a hashmap to store the numbers we've seen so far and their indices. We'll iterate thro"
+    }
+  ],
+  "session_count": 9,
+  "last_seen": "2026-09-05 01:32",
+  "reminders": [
+    {
+      "id": 1,
+      "text": "test RUDRA automation",
+      "time": "2026-09-04 21:56",
+      "spoken": true
+    },
+    {
+      "id": 2,
+      "text": "immediate due test",
+      "time": "2026-09-04 21:54",
+      "spoken": true
+    },
+    {
+      "id": 3,
+      "text": "test RUDRA automation",
+      "time": "2026-09-04 21:57",
+      "spoken": true
+    },
+    {
+      "id": 4,
+      "text": "immediate due test",
+      "time": "2026-09-04 21:55",
+      "spoken": true
+    },
+    {
+      "id": 5,
+      "text": "test RUDRA automation",
+      "time": "2026-09-04 21:57",
+      "spoken": true
+    },
+    {
+      "id": 6,
+      "text": "immediate due test",
+      "time": "2026-09-04 21:55",
+      "spoken": true
+    },
+    {
+      "id": 7,
+      "text": "test RUDRA automation",
+      "time": "2026-09-05 01:07",
+      "spoken": true
+    },
+    {
+      "id": 8,
+      "text": "immediate due test",
+      "time": "2026-09-05 01:05",
+      "spoken": true
+    },
+    {
+      "id": 9,
+      "text": "test RUDRA automation",
+      "time": "2026-09-05 01:20",
+      "spoken": true
+    },
+    {
+      "id": 10,
+      "text": "immediate due test",
+      "time": "2026-09-05 01:18",
+      "spoken": true
+    }
+  ],
+  "deadlines": [],
+  "experiments": [],
+  "gemini_key": "",
+  "lab_stats": {
+    "level": 1,
+    "xp": 60,
+    "credits": 120,
+    "unlocked_upgrades": [
+      "silicon_scrap",
+      "free_gemini_api"
+    ]
+  },
+  "growth": {
+    "goals": [
+      {
+        "id": 1,
+        "text": "Code for 2 hours"
+      },
+      {
+        "id": 2,
+        "text": "Exercise / Workout"
+      },
+      {
+        "id": 3,
+        "text": "Read 10 pages"
+      }
+    ],
+    "history": {
+      "2026-09-01": {
+        "completed_ids": [],
+        "reflection": "",
+        "rating": 0
+      },
+      "2026-09-04": {
+        "completed_ids": [],
+        "reflection": "",
+        "rating": 0
+      },
+      "2026-09-05": {
+        "completed_ids": [],
+        "reflection": "",
+        "rating": 0
+      }
+    },
+    "daily_challenge": "Write one test file and review your codebase structure."
+  },
+  "ngrok_url": "https://pointless-canola-embellish.ngrok-free.dev"
 }

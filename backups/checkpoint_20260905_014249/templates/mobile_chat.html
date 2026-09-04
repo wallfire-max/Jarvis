@@ -1,0 +1,1134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>AETHER AI OS — Mobile Portal</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Outfit:wght@300;400;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body, html {
+      width: 100%;
+      height: 100%;
+      background-color: #050303;
+      font-family: 'Outfit', sans-serif;
+      color: #f5ebeb;
+      overflow: hidden;
+    }
+
+    /* Cyberpunk neon theme */
+    :root {
+      --neon-cyan: #ff5500; /* Flame Orange/Red theme matching user's templates */
+      --neon-blue: #ff2a00;
+      --neon-emerald: #ffd700;
+      --neon-green: #00ffaa;
+      --neon-crimson: #ff0033;
+      --glass-bg: rgba(20, 10, 10, 0.7);
+      --glass-border: rgba(255, 85, 0, 0.15);
+      --glow-shadow: 0 0 15px rgba(255, 85, 0, 0.4);
+    }
+
+    /* ─────────────────────────────────────────────
+       BOOT SCREEN (Sci-Fi Movie Effect)
+       ───────────────────────────────────────────── */
+    #boot-screen {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: #000;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 40px 20px;
+      transition: transform 0.8s cubic-bezier(0.77, 0, 0.175, 1);
+    }
+
+    #boot-screen.deactivated {
+      transform: translateY(-100%);
+    }
+
+    .scanner-wrap {
+      position: relative;
+      width: 200px;
+      height: 200px;
+      margin-top: 40px;
+    }
+
+    #radar-canvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    .scanner-line {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--neon-cyan), transparent);
+      box-shadow: 0 0 10px var(--neon-cyan);
+      animation: scan 3s ease-in-out infinite;
+    }
+
+    @keyframes scan {
+      0% { top: 10%; }
+      50% { top: 90%; }
+      100% { top: 10%; }
+    }
+
+    .boot-console {
+      width: 90%;
+      height: 120px;
+      background: rgba(10, 0, 0, 0.8);
+      border: 1px solid var(--glass-border);
+      border-radius: 4px;
+      padding: 10px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      color: #9c7d75;
+      overflow-y: hidden;
+      line-height: 1.5;
+    }
+
+    .boot-log {
+      border-left: 2px solid var(--neon-cyan);
+      padding-left: 8px;
+      margin-bottom: 4px;
+    }
+
+    .boot-log.success { color: var(--neon-green); border-left-color: var(--neon-green); }
+
+    /* Unlock Slider */
+    .slider-container {
+      width: 80%;
+      height: 50px;
+      background: rgba(30, 15, 15, 0.4);
+      border: 1px solid var(--glass-border);
+      border-radius: 25px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.8);
+    }
+
+    .slider-text {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 10px;
+      color: var(--neon-cyan);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      pointer-events: none;
+      animation: textPulse 1.5s infinite;
+    }
+
+    @keyframes textPulse {
+      0% { opacity: 0.3; }
+      50% { opacity: 1; }
+      100% { opacity: 0.3; }
+    }
+
+    .slider-handle {
+      width: 46px;
+      height: 46px;
+      background: var(--neon-cyan);
+      border-radius: 50%;
+      position: absolute;
+      left: 2px;
+      cursor: grab;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 10px var(--neon-cyan);
+      transition: left 0.1s;
+    }
+
+    .slider-handle svg {
+      width: 20px;
+      height: 20px;
+      fill: #fff;
+    }
+
+    /* ─────────────────────────────────────────────
+       MAIN DASHBOARD
+       ───────────────────────────────────────────── */
+    #dashboard {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      padding: 12px;
+      gap: 12px;
+      position: relative;
+    }
+
+    .header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 4px;
+      backdrop-filter: blur(8px);
+    }
+
+    .sys-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 9px;
+      color: var(--neon-cyan);
+      letter-spacing: 1px;
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--neon-green);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--neon-green);
+      animation: pulse 1.2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(0.9); opacity: 0.5; }
+      50% { transform: scale(1.1); opacity: 1; }
+      100% { transform: scale(0.9); opacity: 0.5; }
+    }
+
+    .logo-txt {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 3px;
+    }
+
+    .pwr-level {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 9px;
+      color: var(--neon-emerald);
+    }
+
+    /* 3D Orb Area */
+    .orb-viewport {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      border: 1px solid rgba(255, 85, 0, 0.05);
+      border-radius: 8px;
+      overflow: hidden;
+      background: radial-gradient(circle at center, rgba(30,10,10,0.1) 0%, rgba(0,0,0,0) 80%);
+    }
+
+    #three-container {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0; left: 0;
+    }
+
+    .hud-overlay {
+      position: absolute;
+      width: 90%;
+      height: 90%;
+      border: 0.5px solid rgba(255,85,0,0.08);
+      pointer-events: none;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .hud-overlay::before {
+      content: '';
+      position: absolute;
+      width: 105%; height: 105%;
+      border: 0.5px dashed rgba(255,85,0,0.04);
+      border-radius: 50%;
+      animation: rotateDash 40s linear infinite;
+    }
+
+    @keyframes rotateDash {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .state-badge {
+      position: absolute;
+      bottom: 20px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 10px;
+      color: var(--neon-cyan);
+      border: 0.5px solid var(--glass-border);
+      background: var(--glass-bg);
+      padding: 4px 16px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      border-radius: 2px;
+    }
+
+    /* Terminal & Chat Area */
+    .chat-panel {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 6px;
+      display: grid;
+      grid-template-rows: 1fr auto;
+      overflow: hidden;
+      backdrop-filter: blur(8px);
+      height: 240px;
+    }
+
+    .messages-stream {
+      padding: 12px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .msg {
+      max-width: 85%;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 11px;
+      line-height: 1.4;
+      word-wrap: break-word;
+      font-family: 'Outfit', sans-serif;
+    }
+
+    .msg.user {
+      align-self: flex-end;
+      background: rgba(255, 85, 0, 0.15);
+      border: 0.5px solid rgba(255, 85, 0, 0.3);
+      color: #fff;
+      border-bottom-right-radius: 0px;
+    }
+
+    .msg.rudra {
+      align-self: flex-start;
+      background: rgba(30, 20, 20, 0.8);
+      border: 0.5px solid var(--glass-border);
+      color: #ffd700;
+      border-bottom-left-radius: 0px;
+    }
+
+    .msg.sys {
+      align-self: center;
+      background: rgba(0, 0, 0, 0.4);
+      border: 0.5px solid rgba(0, 255, 170, 0.1);
+      color: var(--neon-green);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+    }
+
+    /* Console Control Inputs */
+    .controls-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 4px;
+    }
+
+    .cmd-row {
+      display: flex;
+      gap: 8px;
+      width: 100%;
+    }
+
+    .cmd-row input {
+      flex: 1;
+      background: rgba(0,0,0,0.6);
+      border: 1px solid var(--glass-border);
+      border-radius: 4px;
+      color: #fff;
+      padding: 10px;
+      font-size: 12px;
+      outline: none;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .cmd-row button {
+      background: rgba(255, 85, 0, 0.1);
+      border: 1px solid var(--neon-cyan);
+      color: var(--neon-cyan);
+      padding: 0 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 10px;
+      letter-spacing: 1px;
+      transition: all 0.2s;
+    }
+
+    .cmd-row button:active {
+      background: var(--neon-cyan);
+      color: #fff;
+    }
+
+    /* Speech triggers */
+    .voice-control-row {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 8px 0;
+    }
+
+    .mic-btn {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: rgba(255, 85, 0, 0.05);
+      border: 1.5px solid var(--neon-cyan);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(255, 85, 0, 0.1);
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .mic-btn.recording {
+      background: rgba(255, 0, 50, 0.15);
+      border-color: var(--neon-crimson);
+      box-shadow: 0 0 20px var(--neon-crimson);
+      transform: scale(1.1);
+    }
+
+    .mic-btn svg {
+      width: 24px;
+      height: 24px;
+      fill: var(--neon-cyan);
+      transition: fill 0.3s;
+    }
+
+    .mic-btn.recording svg {
+      fill: var(--neon-crimson);
+      animation: heartbeat 1.2s infinite;
+    }
+
+    @keyframes heartbeat {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.15); }
+      100% { transform: scale(1); }
+    }
+
+    /* 18+ Security Lock Overlays */
+    .lock-overlay {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(5, 2, 2, 0.95);
+      z-index: 10;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      backdrop-filter: blur(12px);
+    }
+
+    .lock-box {
+      background: rgba(15, 5, 5, 0.8);
+      border: 1px solid var(--neon-crimson);
+      border-radius: 6px;
+      width: 90%;
+      max-width: 320px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 0 25px rgba(255, 0, 50, 0.25);
+    }
+
+    .lock-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 13px;
+      color: var(--neon-crimson);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      text-align: center;
+    }
+
+    .lock-desc {
+      font-size: 10px;
+      color: #9c7d75;
+      text-align: center;
+      line-height: 1.4;
+    }
+
+    .otp-inputs {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+    }
+
+    .otp-input {
+      width: 40px;
+      height: 45px;
+      background: rgba(0,0,0,0.8);
+      border: 1px solid #331515;
+      color: var(--neon-crimson);
+      font-family: 'Orbitron', sans-serif;
+      font-size: 20px;
+      text-align: center;
+      outline: none;
+      border-radius: 4px;
+    }
+
+    .otp-input:focus {
+      border-color: var(--neon-crimson);
+      box-shadow: 0 0 8px rgba(255, 0, 50, 0.3);
+    }
+
+    .btn-lock-cancel {
+      background: transparent;
+      border: none;
+      color: #5c4743;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 9px;
+      letter-spacing: 1px;
+      cursor: pointer;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- BOOT SCREEN -->
+  <div id="boot-screen">
+    <div></div>
+    <div class="scanner-wrap">
+      <canvas id="radar-canvas" width="200" height="200"></canvas>
+      <div class="scanner-line"></div>
+    </div>
+    
+    <div class="boot-console">
+      <div class="boot-log">INITIALIZING RUDRA MOBILE ENGINE...</div>
+      <div class="boot-log">CONNECTING TO HOST CORE...</div>
+      <div class="boot-log" id="ngrok-log">WAITING FOR HANDSHAKE...</div>
+      <div class="boot-log" id="sec-log">ENCRYPTING LINK CHANNEL...</div>
+    </div>
+
+    <div class="slider-container">
+      <span class="slider-text">Swipe to Activate</span>
+      <div class="slider-handle" id="slider-handle">
+        <svg viewBox="0 0 24 24">
+          <path d="M8.59,16.59L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.59Z"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN HUD -->
+  <div id="dashboard">
+    <div class="header-bar">
+      <div class="sys-status">
+        <div class="status-dot"></div>
+        <span id="sys-status-text">SYS: IDLE</span>
+      </div>
+      <div class="logo-txt">R.U.D.R.A.</div>
+      <div class="pwr-level" id="pwr-level">100%</div>
+    </div>
+
+    <!-- 3D Viewport -->
+    <div class="orb-viewport">
+      <div id="three-container"></div>
+      <div class="hud-overlay"></div>
+      <div class="state-badge" id="state-badge">IDLE</div>
+    </div>
+
+    <!-- Chat Console -->
+    <div class="chat-panel">
+      <div class="messages-stream" id="chat-messages">
+        <div class="msg sys">HOLOGRAPHIC ENVELOPE ESTABLISHED. STANDING BY.</div>
+      </div>
+
+      <div class="controls-panel">
+        <div class="cmd-row">
+          <label for="mobile-file-upload" style="cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0 12px; color: var(--neon-cyan); background: rgba(0, 0, 0, 0.5); border: 1px solid #142035; border-right: none; font-size: 16px; border-radius: 4px 0 0 4px;" title="Attach PDF or Photo">📎</label>
+          <input type="file" id="mobile-file-upload" style="display: none;" onchange="uploadMobileFile()"/>
+          <input type="text" id="text-input" placeholder="ENTER COMMAND OR ATTACH FILES..." autocomplete="off"/>
+          <button id="send-btn" style="border-radius: 0 4px 4px 0;">EXEC</button>
+        </div>
+        <div id="mobile-upload-status" style="font-size: 8px; color: var(--neon-cyan); margin-top: 4px; display: none; text-transform: uppercase; font-family: Orbitron, monospace;"></div>
+        <div class="voice-control-row">
+          <div class="mic-btn" id="mic-btn">
+            <svg viewBox="0 0 24 24">
+              <path d="M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 18+ OTP Security Lock Modal -->
+    <div class="lock-overlay" id="lock-overlay">
+      <div class="lock-box">
+        <div class="lock-title">Verification Required</div>
+        <div class="lock-desc">Accessing restricted channels. Enter the 6-digit One-Time Password sent to your phone.</div>
+        <div class="otp-inputs">
+          <input type="text" maxlength="1" class="otp-input" id="otp-1">
+          <input type="text" maxlength="1" class="otp-input" id="otp-2">
+          <input type="text" maxlength="1" class="otp-input" id="otp-3">
+          <input type="text" maxlength="1" class="otp-input" id="otp-4">
+          <input type="text" maxlength="1" class="otp-input" id="otp-5">
+          <input type="text" maxlength="1" class="otp-input" id="otp-6">
+        </div>
+        <button class="btn-lock-cancel" onclick="cancelOTP()">ABORT ACCESS</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ─────────────────────────────────────────────
+    //  INITIALIZATION & COMMUNICATION
+    // ─────────────────────────────────────────────
+    const socket = io();
+    let currentOTPCode = "";
+
+    // Load Boot Diagnostics
+    setTimeout(() => {
+      document.getElementById('ngrok-log').textContent = 'PORTAL LINKED TO SECURE ENDPOINT [OK]';
+      document.getElementById('ngrok-log').className += ' success';
+    }, 1000);
+    
+    setTimeout(() => {
+      document.getElementById('sec-log').textContent = 'HOLOGRAPHIC ENCRYPTION SHIELD SECURE [128-BIT]';
+      document.getElementById('sec-log').className += ' success';
+    }, 2000);
+
+    // Boot Screen Slider Controller
+    const slider = document.getElementById('slider-handle');
+    const container = slider.parentElement;
+    let isDragging = false;
+    let startX = 0;
+    let shouldUnlock = false;
+
+    slider.addEventListener('mousedown', startDrag);
+    slider.addEventListener('touchstart', startDrag);
+
+    window.addEventListener('mousemove', drag);
+    window.addEventListener('touchmove', drag);
+
+    window.addEventListener('mouseup', endDrag);
+    window.addEventListener('touchend', endDrag);
+    
+    // Tap fallback to ensure sound synthesis permission is always granted on mobile click
+    container.addEventListener('click', () => {
+      unlockCore();
+    });
+
+    function startDrag(e) {
+      isDragging = true;
+      startX = e.clientX || e.touches[0].clientX;
+      shouldUnlock = false;
+    }
+
+    function drag(e) {
+      if (!isDragging) return;
+      const clientX = e.clientX || e.touches[0].clientX;
+      const maxDelta = container.clientWidth - slider.clientWidth - 4;
+      let delta = clientX - startX;
+      delta = Math.max(0, Math.min(maxDelta, delta));
+      slider.style.left = delta + 'px';
+      
+      // Check if unlocked threshold reached
+      if (delta >= maxDelta - 5) {
+        shouldUnlock = true;
+      }
+    }
+
+    function endDrag() {
+      if (!isDragging) return;
+      isDragging = false;
+      const maxDelta = container.clientWidth - slider.clientWidth - 4;
+      if (shouldUnlock) {
+        unlockCore();
+      } else {
+        slider.style.left = '2px';
+      }
+    }
+
+    function speakPhone(text) {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
+        // Search for a suitable voice
+        const voices = window.speechSynthesis.getVoices();
+        const fallbackVoice = voices.find(v => v.lang.includes('en') && (v.name.includes('Google') || v.name.includes('Natural')));
+        if (fallbackVoice) utterance.voice = fallbackVoice;
+        window.speechSynthesis.speak(utterance);
+      }
+    }
+
+    let isUnlocked = false;
+    function unlockCore() {
+      if (isUnlocked) return;
+      isUnlocked = true;
+      
+      // Speeds up removal
+      document.getElementById('boot-screen').classList.add('deactivated');
+      
+      // Initialize browser Speech Synthesis (must be inside user gesture)
+      speakPhone("Aether Mode Activated. Welcome back, Administrator.");
+      
+      // Start 3D visualizer animation
+      animateVisualizer();
+      
+      // Log activation
+      addLog("Aether Mode Activated.", "sys");
+    }
+
+    // ─────────────────────────────────────────────
+    //  3D WEBGL CORE ENGINE (THREE.JS)
+    // ─────────────────────────────────────────────
+    const container3D = document.getElementById('three-container');
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, container3D.clientWidth / container3D.clientHeight, 0.1, 100);
+    camera.position.z = 25;
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(container3D.clientWidth, container3D.clientHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    container3D.appendChild(renderer.domElement);
+
+    // Create 3D morphing particle sphere
+    const particleCount = 2000;
+    const geometry = new THREE.BufferGeometry();
+    const positions = new Float32Array(particleCount * 3);
+    const colors = new Float32Array(particleCount * 3);
+
+    const baseColor = new THREE.Color('#ff5500'); // Flame orange/cyan shifts
+
+    for (let i = 0; i < particleCount * 3; i += 3) {
+      // Random coordinates inside a unit sphere
+      const u = Math.random();
+      const v = Math.random();
+      const theta = u * 2.0 * Math.PI;
+      const phi = Math.acos(2.0 * v - 1.0);
+      const r = 4.5 + Math.random() * 0.8;
+      
+      positions[i] = r * Math.sin(phi) * Math.cos(theta);
+      positions[i+1] = r * Math.sin(phi) * Math.sin(theta);
+      positions[i+2] = r * Math.cos(phi);
+
+      colors[i] = baseColor.r;
+      colors[i+1] = baseColor.g;
+      colors[i+2] = baseColor.b;
+    }
+
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+    // Custom glowing particle shader/material
+    const material = new THREE.PointsMaterial({
+      size: 0.18,
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.75,
+      blending: THREE.AdditiveBlending
+    });
+
+    const particles = new THREE.Points(geometry, material);
+    scene.add(particles);
+
+    // Dynamic state modifiers
+    let visualState = 'idle';
+    let time = 0;
+
+    function morphVisualizer() {
+      const positionAttr = geometry.attributes.position;
+      const colorAttr = geometry.attributes.color;
+      const array = positionAttr.array;
+      const colArray = colorAttr.array;
+
+      const idleColor = new THREE.Color('#ff4500'); // Orange
+      const listeningColor = new THREE.Color('#00ffaa'); // Green-teal
+      const processingColor = new THREE.Color('#ffd700'); // Gold
+      const alertColor = new THREE.Color('#ff0033'); // Crimson
+
+      let targetColor = idleColor;
+      if (visualState === 'listening') targetColor = listeningColor;
+      else if (visualState === 'processing') targetColor = processingColor;
+      else if (visualState === 'alert') targetColor = alertColor;
+
+      for (let i = 0; i < particleCount * 3; i += 3) {
+        let x = array[i];
+        let y = array[i+1];
+        let z = array[i+2];
+
+        // Shift color slowly
+        colArray[i] += (targetColor.r - colArray[i]) * 0.05;
+        colArray[i+1] += (targetColor.g - colArray[i+1]) * 0.05;
+        colArray[i+2] += (targetColor.b - colArray[i+2]) * 0.05;
+
+        // Apply visual wave perturbations depending on state
+        let scale = 1.0;
+        if (visualState === 'idle') {
+          // Slow breathing
+          scale = 1.0 + 0.08 * Math.sin(time * 1.5 + (x + y) * 0.15);
+          array[i] += (x * scale - x) * 0.08;
+          array[i+1] += (y * scale - y) * 0.08;
+        } else if (visualState === 'listening') {
+          // Compression into disk orbits
+          const dist2D = Math.sqrt(x*x + y*y);
+          array[i+2] += (0 - z) * 0.12; // compress z
+          scale = 1.0 + 0.15 * Math.sin(time * 4.0 + dist2D * 0.4);
+          array[i] += (x * scale - x) * 0.15;
+          array[i+1] += (y * scale - y) * 0.15;
+        } else if (visualState === 'processing') {
+          // Morph into double helix/chaotic rotation
+          const angle = Math.atan2(y, x);
+          const r = Math.sqrt(x*x + y*y);
+          const twist = Math.sin(time * 5.0 + z * 0.8) * 0.4;
+          array[i] = r * Math.cos(angle + twist);
+          array[i+1] = r * Math.sin(angle + twist);
+        } else if (visualState === 'alert') {
+          // Chaotic vibrations expanding outward
+          const rx = (Math.random() - 0.5) * 0.4;
+          const ry = (Math.random() - 0.5) * 0.4;
+          const rz = (Math.random() - 0.5) * 0.4;
+          array[i] += rx;
+          array[i+1] += ry;
+          array[i+2] += rz;
+          // Pull back to bounding sphere radius
+          const mag = Math.sqrt(array[i]**2 + array[i+1]**2 + array[i+2]**2);
+          if (mag > 7.0) {
+            array[i] *= 0.9;
+            array[i+1] *= 0.9;
+            array[i+2] *= 0.9;
+          }
+        }
+      }
+      positionAttr.needsUpdate = true;
+      colorAttr.needsUpdate = true;
+    }
+
+    function animateVisualizer() {
+      time += 0.015;
+      
+      // Auto rotate
+      if (visualState === 'idle') {
+        particles.rotation.y += 0.003;
+        particles.rotation.x += 0.001;
+      } else if (visualState === 'listening') {
+        particles.rotation.y += 0.025;
+      } else if (visualState === 'processing') {
+        particles.rotation.y -= 0.045;
+        particles.rotation.z += 0.01;
+      } else if (visualState === 'alert') {
+        particles.rotation.y += 0.06;
+        particles.rotation.x -= 0.03;
+      }
+
+      morphVisualizer();
+      renderer.render(scene, camera);
+      requestAnimationFrame(animateVisualizer);
+    }
+
+    function setVisualState(s) {
+      visualState = s;
+      document.getElementById('state-badge').textContent = s;
+      document.getElementById('sys-status-text').textContent = 'SYS: ' + s;
+      // Change status glow colors
+      const dot = document.querySelector('.status-dot');
+      if (s === 'idle') dot.style.backgroundColor = '#00ffaa';
+      else if (s === 'listening') dot.style.backgroundColor = '#00f0ff';
+      else if (s === 'processing') dot.style.backgroundColor = '#ffd700';
+      else if (s === 'alert') dot.style.backgroundColor = '#ff0033';
+    }
+
+    // Resize viewport on orientation change
+    window.addEventListener('resize', () => {
+      camera.aspect = container3D.clientWidth / container3D.clientHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(container3D.clientWidth, container3D.clientHeight);
+    });
+
+    // ─────────────────────────────────────────────
+    //  BOOT BOOP SOUND SYNTHESIZER
+    // ─────────────────────────────────────────────
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    function playBeep(freq, type, duration) {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+      
+      gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+      
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration);
+    }
+
+    // Radar scanner animation (2D radar background on boot screen)
+    const radar = document.getElementById('radar-canvas');
+    const rCtx = radar.getContext('2d');
+    let rAngle = 0;
+    
+    function drawRadar() {
+      rCtx.clearRect(0,0,200,200);
+      rCtx.save();
+      rCtx.strokeStyle = 'rgba(255, 85, 0, 0.15)';
+      rCtx.lineWidth = 1;
+      // Rings
+      rCtx.beginPath(); rCtx.arc(100,100,80,0,Math.PI*2); rCtx.stroke();
+      rCtx.beginPath(); rCtx.arc(100,100,50,0,Math.PI*2); rCtx.stroke();
+      rCtx.beginPath(); rCtx.arc(100,100,20,0,Math.PI*2); rCtx.stroke();
+      
+      // Grid lines
+      rCtx.beginPath(); rCtx.moveTo(20,100); rCtx.lineTo(180,100); rCtx.stroke();
+      rCtx.beginPath(); rCtx.moveTo(100,20); rCtx.lineTo(100,180); rCtx.stroke();
+      
+      // Sweeping line
+      rCtx.translate(100,100);
+      rCtx.rotate(rAngle);
+      
+      const grad = rCtx.createLinearGradient(0,0,80,0);
+      grad.addColorStop(0, 'rgba(255,85,0,0.8)');
+      grad.addColorStop(1, 'rgba(255,85,0,0)');
+      
+      rCtx.strokeStyle = grad;
+      rCtx.lineWidth = 2.5;
+      rCtx.beginPath(); rCtx.moveTo(0,0); rCtx.lineTo(80,0); rCtx.stroke();
+      rCtx.restore();
+      
+      rAngle += 0.02;
+      requestAnimationFrame(drawRadar);
+    }
+    drawRadar();
+
+    // ─────────────────────────────────────────────
+    //  SOCKET COMMUNICATION & WEBSPEECH
+    // ─────────────────────────────────────────────
+    function addLog(text, sender) {
+      const container = document.getElementById('chat-messages');
+      const msgDiv = document.createElement('div');
+      msgDiv.className = 'msg ' + sender;
+      msgDiv.innerHTML = text;
+      container.appendChild(msgDiv);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    // Receive HUD response from main python server
+    socket.on('response_hud', (data) => {
+       const text = data.message;
+       const sender = data.sender;
+       
+       if (sender === 'AETHER') {
+         addLog(text, 'rudra');
+         speakPhone(text);
+       } else if (sender === 'SYS') {
+         addLog(text, 'sys'); // Display visually but DO NOT speak it!
+       } else {
+         addLog(text, 'user');
+       }
+    });
+
+    socket.on('state_update', (data) => {
+      setVisualState(data.state);
+    });
+
+    socket.on('open_browser_url', (data) => {
+      if (data.url) {
+        addLog("SYS: REDIRECTING DEVICE TO " + data.url, 'sys');
+        // Open the URL in a new browser tab/window on the mobile device
+        window.open(data.url, '_blank');
+      }
+    });
+
+    // Check for incoming security OTP events
+    socket.on('otp_alert', (data) => {
+      // Show OTP verification Lock screen overlay
+      document.getElementById('lock-overlay').style.display = 'flex';
+      setVisualState('alert');
+      currentOTPCode = data.otp;
+      playBeep(440, 'sawtooth', 0.8);
+    });
+
+    // Handle Exec button click
+    document.getElementById('send-btn').addEventListener('click', sendTextCommand);
+    document.getElementById('text-input').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') sendTextCommand();
+    });
+
+    function sendTextCommand() {
+      const input = document.getElementById('text-input');
+      const val = input.value.trim();
+      if (!val) return;
+      
+      addLog(val, 'user');
+      socket.emit('command', { command: val });
+      
+      input.value = '';
+    }
+
+    function uploadMobileFile() {
+      const fileInput = document.getElementById('mobile-file-upload');
+      if (fileInput.files.length === 0) return;
+      
+      const statusDiv = document.getElementById('mobile-upload-status');
+      statusDiv.textContent = "UPLOADING FILE...";
+      statusDiv.style.display = "block";
+      statusDiv.style.color = "var(--neon-cyan)";
+      
+      const formData = new FormData();
+      formData.append('file', fileInput.files[0]);
+      
+      fetch('/api/upload_media', {
+        method: 'POST',
+        body: formData
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          statusDiv.textContent = `ATTACHED: ${data.filename}`;
+          statusDiv.style.color = "#00ffaa";
+          addLog(`FILE ATTACHED: ${data.filename}`, 'sys');
+        } else {
+          statusDiv.textContent = "UPLOAD FAILED.";
+          statusDiv.style.color = "#ff0055";
+        }
+      })
+      .catch(err => {
+        statusDiv.textContent = "UPLOAD ERROR.";
+        statusDiv.style.color = "#ff0055";
+      });
+    }
+
+    // ─────────────────────────────────────────────
+    //  WEB SPEECH RECOGNITION (MOBILE MICROPHONE)
+    // ─────────────────────────────────────────────
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let recognition = null;
+    let isRecording = false;
+
+    if (SpeechRecognition) {
+      recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = 'en-US';
+
+      recognition.onstart = () => {
+        isRecording = true;
+        document.getElementById('mic-btn').className += ' recording';
+        setVisualState('listening');
+        playBeep(600, 'sine', 0.15);
+        // Cancel browser speaking if they interrupt
+        if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+        // Emit socket alert to silence host PC
+        socket.emit('audio_start', {});
+      };
+
+      recognition.onerror = (e) => {
+        console.error("Speech Recognition Error: ", e);
+        stopRecordingState();
+      };
+
+      recognition.onend = () => {
+        stopRecordingState();
+      };
+
+      recognition.onresult = (event) => {
+        const text = event.results[0][0].transcript;
+        addLog(text, 'user');
+        socket.emit('command', { command: text });
+      };
+    } else {
+      document.getElementById('mic-btn').style.opacity = '0.3';
+      addLog("Speech recognition not supported on this browser.", "sys");
+    }
+
+    function stopRecordingState() {
+      isRecording = false;
+      document.getElementById('mic-btn').classList.remove('recording');
+      setVisualState('idle');
+      playBeep(300, 'sine', 0.15);
+    }
+
+    const micBtn = document.getElementById('mic-btn');
+    
+    // Support click to toggle recording
+    micBtn.addEventListener('click', () => {
+      if (!recognition) return;
+      if (isRecording) {
+        recognition.stop();
+      } else {
+        recognition.start();
+      }
+    });
+
+    // ─────────────────────────────────────────────
+    //  18+ OTP GATE VALIDATION CODE
+    // ─────────────────────────────────────────────
+    const otpInputs = document.querySelectorAll('.otp-input');
+    otpInputs.forEach((input, index) => {
+      input.addEventListener('input', (e) => {
+        const val = e.target.value;
+        if (val.length === 1 && index < otpInputs.length - 1) {
+          otpInputs[index + 1].focus();
+        }
+        checkVerifyOTP();
+      });
+      
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Backspace' && !e.target.value && index > 0) {
+          otpInputs[index - 1].focus();
+        }
+      });
+    });
+
+    function checkVerifyOTP() {
+      let code = "";
+      otpInputs.forEach(i => code += i.value);
+      if (code.length === 6) {
+        socket.emit('verify_otp_web', { code: code });
+        
+        // Check local matching
+        if (code === currentOTPCode) {
+          playBeep(880, 'sine', 0.4);
+          document.getElementById('lock-overlay').style.display = 'none';
+          addLog("OTP Code Verified. Restricted access granted.", "sys");
+          speakPhone("Authentication complete Sir. Opening restricted channel.");
+          clearOTPInputs();
+        } else {
+          playBeep(220, 'triangle', 0.6);
+          speakPhone("Passcode incorrect Sir. Authentication failed.");
+          clearOTPInputs();
+          otpInputs[0].focus();
+        }
+      }
+    }
+
+    function cancelOTP() {
+      socket.emit('cancel_otp_web', {});
+      document.getElementById('lock-overlay').style.display = 'none';
+      clearOTPInputs();
+      setVisualState('idle');
+      addLog("Access aborted by Administrator.", "sys");
+      speakPhone("Access aborted Sir.");
+    }
+
+    function clearOTPInputs() {
+      otpInputs.forEach(i => i.value = "");
+    }
+  </script>
+</body>
+</html>

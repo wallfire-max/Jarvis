@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+memory.json
+pending_commands.json
+run_log.txt
+startup_log.txt
+temp_voice.wav
+temp_voice_*.wav
+proc_voice_*.wav

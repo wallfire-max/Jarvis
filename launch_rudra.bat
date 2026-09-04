@@ -1,0 +1,9 @@
+@echo off
+cd /d "C:\Users\Jaswa\OneDrive\Desktop\rudra"
+echo Launching Aether Flask Server Node...
+start "" /min python app.py
+echo Launching Rudra Voice Daemon...
+start "" /min python rudra.py
+timeout /t 5 >nul
+echo Loading Stark Dashboard HUD...
+start "" "http://localhost:5000"

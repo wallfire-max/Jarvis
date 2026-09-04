@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>J.A.R.V.I.S</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&display=swap');
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{background:#000;font-family:'Orbitron',monospace;color:#c8d8e8;min-height:100vh;overflow-x:hidden;}
+    .hud{padding:16px;min-height:100vh;display:grid;grid-template-rows:auto 1fr auto;gap:12px;position:relative;}
+    .scan-line{position:fixed;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,#c8b87a44,transparent);animation:scan 4s linear infinite;pointer-events:none;z-index:999;}
+    @keyframes scan{0%{top:0;opacity:0;}10%{opacity:1;}90%{opacity:1;}100%{top:100%;opacity:0;}}
+    .top-bar{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;border-bottom:0.5px solid #4a3a2a;padding-bottom:12px;}
+    .top-left{display:flex;flex-direction:column;gap:4px;}
+    .top-right{display:flex;flex-direction:column;gap:4px;text-align:right;}
+    .hud-label{font-size:9px;color:#6a5a3a;letter-spacing:3px;text-transform:uppercase;}
+    .hud-value{font-size:12px;color:#c8b87a;letter-spacing:2px;}
+    .hud-value.green{color:#4aaa6a;}
+    .hud-value.red{color:#cc4444;}
+    .suit-name{font-size:22px;font-weight:700;color:#c8b87a;letter-spacing:8px;text-align:center;}
+    .suit-sub{font-size:9px;color:#6a5a3a;letter-spacing:4px;text-align:center;margin-top:4px;}
+    .middle{display:grid;grid-template-columns:280px 1fr 280px;gap:16px;align-items:start;}
+    .panel{background:#080810;border:0.5px solid #2a2010;padding:12px;position:relative;}
+    .panel::before{content:'';position:absolute;top:-1px;left:12px;width:40px;height:1px;background:#c8b87a;}
+    .panel-title{font-size:8px;color:#6a5a3a;letter-spacing:3px;margin-bottom:10px;text-transform:uppercase;}
+    .stat-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+    .stat-label{font-size:9px;color:#4a5a6a;letter-spacing:1px;}
+    .stat-val{font-size:11px;color:#c8d8e8;letter-spacing:1px;}
+    .stat-val.gold{color:#c8b87a;}
+    .stat-val.green{color:#4aaa6a;}
+    .stat-val.red{color:#cc4444;}
+    .bar{height:2px;background:#111120;margin-top:2px;}
+    .bar-fill{height:100%;background:linear-gradient(90deg,#3a2a10,#c8b87a);transition:width 1s;}
+    .center-col{display:flex;flex-direction:column;align-items:center;gap:16px;}
+    .orb-wrap{position:relative;width:220px;height:220px;display:flex;align-items:center;justify-content:center;}
+    .ring{position:absolute;border-radius:50%;border:0.5px solid #2a2010;}
+    .r1{width:220px;height:220px;animation:spin 12s linear infinite;}
+    .r2{width:176px;height:176px;animation:spin 8s linear infinite reverse;}
+    .r3{width:132px;height:132px;animation:spin 5s linear infinite;}
+    .r1::after,.r2::after,.r3::after{content:'';position:absolute;width:5px;height:5px;background:#c8b87a;border-radius:50%;top:-2.5px;left:50%;transform:translateX(-50%);}
+    @keyframes spin{to{transform:rotate(360deg);}}
+    .orb-core{width:88px;height:88px;border-radius:50%;background:#050510;border:1.5px solid #c8b87a;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:2;}
+    .orb-title{font-size:9px;color:#c8b87a;letter-spacing:2px;}
+    .orb-status{font-size:7px;color:#6a5a3a;letter-spacing:1px;margin-top:3px;animation:blink 2s ease-in-out infinite;}
+    @keyframes blink{0%,100%{opacity:1;}50%{opacity:0.3;}}
+    .status-badge{font-size:10px;color:#c8b87a;letter-spacing:4px;border:0.5px solid #3a2a10;padding:6px 20px;text-transform:uppercase;}
+    .cmd-log{width:100%;background:#05050e;border:0.5px solid #151520;padding:10px;height:150px;overflow-y:auto;}
+    .log-line{font-size:9px;color:#2a3a4a;letter-spacing:1px;margin-bottom:4px;border-left:2px solid #151520;padding-left:6px;}
+    .log-line.active{color:#c8d8e8;border-left-color:#c8b87a;}
+    .log-line.jarvis{color:#c8b87a;border-left-color:#6a5a3a;}
+    .cmd-input{display:flex;gap:8px;width:100%;}
+    .cmd-input input{flex:1;background:#05050e;border:0.5px solid #2a2010;color:#c8b87a;font-family:'Orbitron',monospace;font-size:10px;padding:8px;letter-spacing:2px;outline:none;}
+    .cmd-input input::placeholder{color:#2a2a2a;}
+    .cmd-input button{background:#0a0a18;border:0.5px solid #3a2a10;color:#8a7a4a;font-family:'Orbitron',monospace;font-size:9px;padding:8px 16px;cursor:pointer;letter-spacing:2px;transition:all 0.2s;}
+    .cmd-input button:hover{background:#151525;border-color:#c8b87a;color:#c8b87a;}
+    .news-item{font-size:8px;color:#3a4a5a;letter-spacing:1px;margin-bottom:6px;padding-left:8px;border-left:1px solid #2a2010;line-height:1.4;}
+    .news-item.hot{color:#7a6a4a;border-left-color:#c8b87a;}
+    .module-row{display:flex;justify-content:space-between;margin-bottom:6px;}
+    .module-name{font-size:9px;color:#4a5a6a;}
+    .module-status{font-size:9px;letter-spacing:1px;}
+    .bottom-bar{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;border-top:0.5px solid #1a1508;padding-top:12px;}
+    .bottom-stat{text-align:center;}
+    .bottom-label{font-size:7px;color:#3a4a5a;letter-spacing:2px;text-transform:uppercase;}
+    .bottom-val{font-size:11px;color:#c8b87a;letter-spacing:1px;margin-top:3px;}
+    .corner{position:fixed;width:20px;height:20px;}
+    .corner.tl{top:8px;left:8px;border-top:1px solid #c8b87a;border-left:1px solid #c8b87a;}
+    .corner.tr{top:8px;right:8px;border-top:1px solid #c8b87a;border-right:1px solid #c8b87a;}
+    .corner.bl{bottom:8px;left:8px;border-bottom:1px solid #c8b87a;border-left:1px solid #c8b87a;}
+    .corner.br{bottom:8px;right:8px;border-bottom:1px solid #c8b87a;border-right:1px solid #c8b87a;}
+    .progress-bar{height:3px;background:#111120;margin-top:4px;}
+    .progress-fill{height:100%;background:linear-gradient(90deg,#3a2a10,#c8b87a);}
+    ::-webkit-scrollbar{width:3px;}
+    ::-webkit-scrollbar-track{background:#050510;}
+    ::-webkit-scrollbar-thumb{background:#2a2010;}
+  </style>
+</head>
+<body>
+<div class="corner tl"></div>
+<div class="corner tr"></div>
+<div class="corner bl"></div>
+<div class="corner br"></div>
+<div class="scan-line"></div>
+
+<div class="hud">
+  <div class="top-bar">
+    <div class="top-left">
+      <span class="hud-label">System status</span>
+      <span class="hud-value green">ONLINE</span>
+      <span class="hud-label" style="margin-top:4px;">Location</span>
+      <span class="hud-value">Chennai, IN</span>
+    </div>
+    <div>
+      <div class="suit-name">J.A.R.V.I.S</div>
+      <div class="suit-sub">Mark II — Jaswanth Edition</div>
+      <div style="text-align:center;margin-top:8px;">
+        <span class="hud-value" id="clock" style="font-size:16px;">--:--:-- --</span>
+      </div>
+      <div style="text-align:center;margin-top:4px;">
+        <span class="hud-label" id="datestr">--- -- ----</span>
+      </div>
+    </div>
+    <div class="top-right">
+      <span class="hud-label">Battery</span>
+      <span class="hud-value" id="batt-val">-- %</span>
+      <span class="hud-label" style="margin-top:4px;">Charge status</span>
+      <span class="hud-value green" id="batt-status">--</span>
+    </div>
+  </div>
+
+  <div class="middle">
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="panel">
+        <div class="panel-title">System vitals</div>
+        <div class="stat-row"><span class="stat-label">Voice engine</span><span class="stat-val green">ACTIVE</span></div>
+        <div class="stat-row"><span class="stat-label">Speech recog</span><span class="stat-val green">LISTENING</span></div>
+        <div class="stat-row"><span class="stat-label">AI brain</span><span class="stat-val green">LLAMA 3.2</span></div>
+        <div class="stat-row"><span class="stat-label">Memory</span><span class="stat-val gold" id="mem-count">-- facts</span></div>
+        <div class="stat-row"><span class="stat-label">Weather</span><span class="stat-val gold" id="weather-val">--</span></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">Today's news</div>
+        <div id="news-container">
+          <div class="news-item">Loading headlines Sir...</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">Mission progress</div>
+        <div class="stat-row"><span class="stat-label">Current level</span><span class="stat-val gold">5 / 13</span></div>
+        <div class="progress-bar"><div class="progress-fill" style="width:38%"></div></div>
+        <div style="font-size:8px;color:#3a4a5a;margin-top:6px;letter-spacing:1px;">Next: Level 6 — Proactive alerts</div>
+        <div class="stat-row" style="margin-top:8px;"><span class="stat-label">Hanuman unit</span><span class="stat-val red">BUILDING</span></div>
+        <div class="stat-row"><span class="stat-label">Drone swarm</span><span class="stat-val red">PENDING</span></div>
+      </div>
+    </div>
+
+    <div class="center-col">
+      <div class="orb-wrap">
+        <div class="ring r1"></div>
+        <div class="ring r2"></div>
+        <div class="ring r3"></div>
+        <div class="orb-core">
+          <div class="orb-title">JARVIS</div>
+          <div class="orb-status" id="orb-status">READY</div>
+        </div>
+      </div>
+
+      <div class="status-badge" id="main-status">STANDING BY</div>
+
+      <div class="cmd-log" id="cmd-log">
+        <div class="log-line jarvis">JARVIS: Good day Sir. Mark II HUD online.</div>
+        <div class="log-line jarvis">JARVIS: All systems nominal. Memory loaded.</div>
+        <div class="log-line active">SYS: Waiting for your command Jaswanth.</div>
+      </div>
+
+      <div class="cmd-input">
+        <input type="text" id="cmd-text" placeholder="TYPE COMMAND OR USE VOICE..." onkeypress="if(event.key==='Enter')sendCommand()"/>
+        <button onclick="sendCommand()">SEND ↗</button>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;width:100%;">
+        <button onclick="setMode('listening')" style="background:#05050e;border:0.5px solid #2a2010;color:#6a5a3a;font-family:Orbitron,monospace;font-size:8px;padding:6px;cursor:pointer;letter-spacing:1px;">LISTEN</button>
+        <button onclick="setMode('speaking')" style="background:#05050e;border:0.5px solid #2a2010;color:#6a5a3a;font-family:Orbitron,monospace;font-size:8px;padding:6px;cursor:pointer;letter-spacing:1px;">SPEAK</button>
+        <button onclick="setMode('processing')" style="background:#05050e;border:0.5px solid #2a2010;color:#6a5a3a;font-family:Orbitron,monospace;font-size:8px;padding:6px;cursor:pointer;letter-spacing:1px;">PROCESS</button>
+        <button onclick="setMode('alert')" style="background:#05050e;border:0.5px solid #2a2010;color:#6a5a3a;font-family:Orbitron,monospace;font-size:8px;padding:6px;cursor:pointer;letter-spacing:1px;">ALERT</button>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="panel">
+        <div class="panel-title">Jarvis modules</div>
+        <div class="module-row"><span class="module-name">Personality</span><span class="module-status green">ON ✓</span></div>
+        <div class="module-row"><span class="module-name">Daily briefing</span><span class="module-status green">ON ✓</span></div>
+        <div class="module-row"><span class="module-name">Laptop control</span><span class="module-status green">ON ✓</span></div>
+        <div class="module-row"><span class="module-name">AI brain</span><span class="module-status green">ON ✓</span></div>
+        <div class="module-row"><span class="module-name">Memory</span><span class="module-status green">ON ✓</span></div>
+        <div class="module-row"><span class="module-name">Proactive alerts</span><span class="module-status" style="color:#cc4444;">PENDING</span></div>
+        <div class="module-row"><span class="module-name">Phone link</span><span class="module-status" style="color:#cc4444;">PENDING</span></div>
+        <div class="module-row"><span class="module-name">Face recog</span><span class="module-status" style="color:#cc4444;">PENDING</span></div>
+        <div class="module-row"><span class="module-name">Own AI server</span><span class="module-status" style="color:#cc4444;">PENDING</span></div>
+        <div class="module-row"><span class="module-name">Smart glasses</span><span class="module-status" style="color:#cc4444;">FUTURE</span></div>
+        <div class="module-row"><span class="module-name">Drone swarm</span><span class="module-status" style="color:#cc4444;">FUTURE</span></div>
+        <div class="module-row"><span class="module-name">Hanuman unit</span><span class="module-status" style="color:#c8b87a;">BUILDING</span></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">Command history</div>
+        <div id="cmd-history" style="max-height:120px;overflow-y:auto;">
+          <div class="log-line active">SYS: No commands yet Sir.</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">Threat analysis</div>
+        <div class="stat-row"><span class="stat-label">Threat level</span><span class="stat-val green">CLEAR</span></div>
+        <div class="stat-row"><span class="stat-label">Hanuman status</span><span class="stat-val red">OFFLINE</span></div>
+        <div class="stat-row"><span class="stat-label">Drone units</span><span class="stat-val red">0 / 100</span></div>
+        <div class="stat-row"><span class="stat-label">Arc reactor</span><span class="stat-val gold" style="animation:blink 2s infinite;">STABLE</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-bar">
+    <div class="bottom-stat">
+      <div class="bottom-label">Weather</div>
+      <div class="bottom-val" id="bot-weather">--</div>
+    </div>
+    <div class="bottom-stat">
+      <div class="bottom-label">Battery</div>
+      <div class="bottom-val" id="bot-battery">-- %</div>
+    </div>
+    <div class="bottom-stat">
+      <div class="bottom-label">AI model</div>
+      <div class="bottom-val">LLAMA</div>
+    </div>
+    <div class="bottom-stat">
+      <div class="bottom-label">Memory</div>
+      <div class="bottom-val" id="bot-memory">--</div>
+    </div>
+    <div class="bottom-stat">
+      <div class="bottom-label">Location</div>
+      <div class="bottom-val">CHENNAI</div>
+    </div>
+    <div class="bottom-stat">
+      <div class="bottom-label">Status</div>
+      <div class="bottom-val" style="color:#4aaa6a;animation:blink 2s infinite;">ONLINE</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const socket = io();
+let cmdCount = 0;
+
+function pad(n){return String(n).padStart(2,'0');}
+
+function updateClock(){
+  const now = new Date();
+  let h = now.getHours(), m = now.getMinutes(), s = now.getSeconds();
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  document.getElementById('clock').textContent = pad(h)+':'+pad(m)+':'+pad(s)+' '+ampm;
+  const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  const now2 = new Date();
+  document.getElementById('datestr').textContent = months[now2.getMonth()]+' '+pad(now2.getDate())+' '+now2.getFullYear();
+}
+
+function addLog(text, type='active'){
+  const log = document.getElementById('cmd-log');
+  const line = document.createElement('div');
+  line.className = 'log-line '+type;
+  line.textContent = text;
+  log.appendChild(line);
+  log.scrollTop = log.scrollHeight;
+}
+
+function addHistory(text){
+  const history = document.getElementById('cmd-history');
+  const line = document.createElement('div');
+  line.className = 'log-line active';
+  line.textContent = text;
+  history.appendChild(line);
+  history.scrollTop = history.scrollHeight;
+}
+
+function setMode(mode){
+  const statuses = {
+    idle: 'STANDING BY',
+    listening: 'LISTENING...',
+    speaking: 'SPEAKING...',
+    processing: 'PROCESSING...',
+    alert: 'ALERT!'
+  };
+  document.getElementById('main-status').textContent = statuses[mode] || 'STANDING BY';
+  document.getElementById('orb-status').textContent = mode.toUpperCase();
+  addLog('MODE: '+mode.toUpperCase());
+}
+
+function sendCommand(){
+  const input = document.getElementById('cmd-text');
+  const cmd = input.value.trim();
+  if(!cmd) return;
+  addLog('YOU: '+cmd);
+  addHistory(cmd);
+  socket.emit('command', {command: cmd});
+  input.value = '';
+  cmdCount++;
+}
+
+function loadStatus(){
+  fetch('/api/status')
+    .then(r => r.json())
+    .then(data => {
+      document.getElementById('batt-val').textContent = (data.battery || '--') + ' %';
+      document.getElementById('batt-status').textContent = data.plugged ? 'CHARGING' : 'ON BATTERY';
+      document.getElementById('weather-val').textContent = data.weather || '--';
+      document.getElementById('bot-weather').textContent = data.weather || '--';
+      document.getElementById('bot-battery').textContent = (data.battery || '--') + ' %';
+      document.getElementById('mem-count').textContent = (data.memory_count || 0) + ' facts';
+      document.getElementById('bot-memory').textContent = (data.memory_count || 0) + ' facts';
+    })
+    .catch(() => {});
+}
+
+function loadNews(){
+  fetch('/api/news')
+    .then(r => r.json())
+    .then(data => {
+      const container = document.getElementById('news-container');
+      container.innerHTML = '';
+      data.headlines.forEach((h, i) => {
+        const div = document.createElement('div');
+        div.className = 'news-item' + (i < 2 ? ' hot' : '');
+        div.textContent = h;
+        container.appendChild(div);
+      });
+    })
+    .catch(() => {});
+}
+
+socket.on('status_update', data => {
+  if(data.battery) {
+    document.getElementById('batt-val').textContent = data.battery + ' %';
+    document.getElementById('bot-battery').textContent = data.battery + ' %';
+    document.getElementById('batt-status').textContent = data.plugged ? 'CHARGING' : 'ON BATTERY';
+  }
+});
+
+socket.on('response', data => {
+  addLog('JARVIS: '+data.message, 'jarvis');
+});
+
+setInterval(updateClock, 1000);
+setInterval(loadStatus, 10000);
+updateClock();
+loadStatus();
+loadNews();
+</script>
+</body>
+</html>
